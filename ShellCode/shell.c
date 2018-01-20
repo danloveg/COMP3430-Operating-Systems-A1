@@ -13,17 +13,11 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-
-#define MAX_INPUT_LEN 80
-#define DELIMITER " "
-
-void freeArray(void **ary, int len);
-int countTokens(const char *str, const char *del);
-void getCommandWithArgs(char *input, char *del, char *cmd, char ***args, int *arglen);
-void executeUserCommand(char *cmd, char ***args);
+#include "shell.h"
 
 
 int main(int argc, char *argv[]) {
@@ -182,7 +176,7 @@ void executeUserCommand(char *cmd, char ***args) {
         assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
 
         if (returnStatus == 65280 && cmd != NULL) {
-            printf("Unrecognized command.\n", cmd);
+            printf("Unrecognized command.\n");
         }
     }
 }
