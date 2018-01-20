@@ -12,6 +12,8 @@
 
 #define SHELL_VARS_C
 
+void initShellVarProg();
+void quitShellVarProg();
 void addShellVar(char *key, char *value);
 char * getShellVar(char *key);
 
