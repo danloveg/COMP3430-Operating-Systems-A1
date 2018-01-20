@@ -1,5 +1,5 @@
 # Ignored objects folder
-objects/
+object/
 
 # Ignore shell executable
 ShellCode/shell
