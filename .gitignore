@@ -1,0 +1,6 @@
+# Ignored objects folder
+objects/
+
+# Ignore shell executable
+ShellCode/shell
+
