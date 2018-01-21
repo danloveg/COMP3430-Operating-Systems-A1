@@ -42,12 +42,14 @@ void initShellVarProg() {
     int i;
 
     assert(shellVarList == NULL && "Failure, shell variable program already initialized.");
-    shellVarList = malloc(sizeof(KeyValList));
+
+    // Dynamically allocate a list to store shell variables
+    shellVarList = (KeyValList*) malloc(sizeof(KeyValList));
+    assert(shellVarList != NULL);
     shellVarList -> currIndex = 0;
     shellVarList -> length = INIT_MAX_LEN;
-
-    // Keep things simple by holding key-value objects in an array
     shellVarList -> shellVariables = (KeyValObject**) malloc(shellVarList -> length * sizeof(KeyValObject));
+    assert(shellVarList -> shellVariables != NULL);
 
     for (i = 0; i < shellVarList -> length; i++) {
         shellVarList -> shellVariables[i] = NULL;
@@ -66,17 +68,18 @@ void initShellVarProg() {
  */
 void addShellVar(char *key, char *value) {
     assert(shellVarList != NULL && "Must have made prior call to initShellVarProg()");
-    assert(key != NULL && value != NULL);
+    assert(key != NULL && value != NULL && "Cannot pass NULL pointers as args");
 
     char *exists = getShellVar(key);
 
     // Don't add if the variable is already there
     if (exists == NULL) {
 
+        // Double the size of the array if need be
         if (shellVarList -> currIndex >=  shellVarList -> length) {
-            // Double the size of the array
             shellVarList -> length = shellVarList -> length * 2;
             shellVarList -> shellVariables = (KeyValObject**) realloc(shellVarList -> shellVariables, (shellVarList -> length * sizeof(KeyValObject)));
+            assert(shellVarList -> shellVariables != NULL);
         }
 
         KeyValObject *newObj = (KeyValObject *)malloc(sizeof(KeyValObject));
@@ -84,6 +87,7 @@ void addShellVar(char *key, char *value) {
 
         newObj -> key = strdup(key);
         newObj -> value = strdup(value);
+        assert(newObj -> key != NULL && newObj -> value != NULL);
 
         shellVarList -> shellVariables[shellVarList -> currIndex++] = newObj;
     }
@@ -106,13 +110,14 @@ char * getShellVar(char *key) {
     char *assocValue = NULL;
 
     assert(shellVarList != NULL && "Must have made prior call to initShellVarProg()");
-    assert(key != NULL);
+    assert(key != NULL && "cannot pass a NULL key");
 
     // Search for the value
     while (count < shellVarList -> length && assocValue == NULL) {
 
         if (shellVarList -> shellVariables[count] != NULL && strcmp(shellVarList -> shellVariables[count] -> key, key) == 0) {
             assocValue = strdup(shellVarList -> shellVariables[count] -> value);
+            assert(assocValue != NULL);
         } else if (shellVarList -> shellVariables[count] == NULL) {
             break;
         }
