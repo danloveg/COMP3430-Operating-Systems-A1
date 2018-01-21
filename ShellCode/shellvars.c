@@ -57,8 +57,8 @@ void initShellVarProg() {
 
 
 /**
- * Add a new shell variable. If the variable has already been added nothing
- * happens.
+ * Add a new shell variable. If the variable has already been added then it is
+ * updated.
  *
  * Precondition: initShellVarProg() has been called.
  *
@@ -89,7 +89,24 @@ void addShellVar(char *key, char *value) {
         assert(newObj -> key != NULL && newObj -> value != NULL);
 
         shellVarList -> shellVariables[shellVarList -> currIndex++] = newObj;
+    } else {
+        // Find the index of the key
+        int i, found = 0;
+
+        while (found == 0 && i < shellVarList -> currIndex) {
+            if (strcmp(key, shellVarList -> shellVariables[i] -> key) == 0) {
+                found = 1;
+            } else {
+                i++;
+            }
+        }
+
+        // free the current shellVariable value
+        free(shellVarList -> shellVariables[i] -> value);
+        shellVarList -> shellVariables[i] -> value = strdup(value);
     }
+
+    free(exists);
 }
 
 
