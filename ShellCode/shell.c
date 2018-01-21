@@ -40,8 +40,16 @@ int main(int argc, char *argv[]) {
     // Enable shell variables
     initShellVarProg();
 
-    openShellInitFile();
-    closeShellInitFile();
+    if (openShellInitFile() == 0) {
+        char *line = NULL;
+
+        do {
+            line = readFileString();
+            free(line);
+        } while (line != NULL);
+
+        closeShellInitFile();
+    }
 
     printf("$ ");
 

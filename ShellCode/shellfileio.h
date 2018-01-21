@@ -15,7 +15,7 @@
 #define SHELL_INIT_FILE_NAME ".shell_init"
 
 int openShellInitFile();
-void readFileString(char *str);
+char * readFileString();
 int closeShellInitFile();
 
 #endif

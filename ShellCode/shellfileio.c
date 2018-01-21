@@ -17,8 +17,10 @@
 #include <pwd.h>
 #include "shellfileio.h"
 
-// Static file pointer
+
 FILE *filePtr = NULL;
+char charBuf[256];
+char *characterBuffer = &charBuf[0];
 
 
 /**
@@ -66,13 +68,35 @@ int openShellInitFile() {
 /**
  * Gets one line from the open file.
  * 
- * Precondition: OpenShellInitFile() has been called and opened file
+ * Note: str points to a dynamically created string, so it must be freed later.
+ *
+ * Precondition: openShellInitFile() has been called and opened file
  *     successfully.
- * 
- * @param char *str: Points to a string from the file
+ *
+ * @returns char *: Pointer to dynamically created string
  */
-void readFileString(char *str) {
-    str = NULL;
+char * readFileString() {
+    // Read a character at a time, return a full string
+    assert(filePtr != NULL && "File must be open to read");
+
+    char *str = NULL;
+
+    int lineLength = 0;
+    char c = fgetc(filePtr);
+
+    while (c != EOF && c != '\n') {
+        characterBuffer[lineLength++] = c;
+        c = fgetc(filePtr);
+    }
+
+    // Put a null terminator at the end to make it a string
+    characterBuffer[lineLength] = '\0';
+
+    if (lineLength != 0 && c != EOF) {
+        str = strdup(characterBuffer);
+    }
+
+    return str;
 }
 
 
