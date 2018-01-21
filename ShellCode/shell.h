@@ -20,5 +20,6 @@ void freeArray(void **ary, int len);
 int countTokens(const char *str, const char *del);
 void getCommandWithArgs(char *input, char *del, char *cmd, char ***args, int *arglen);
 void executeUserCommand(char *cmd, char ***args, int arglen);
+void setShellVariable(char *cmd, char ***args, int arglen);
 
 #endif

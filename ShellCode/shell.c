@@ -174,46 +174,8 @@ void executeUserCommand(char *cmd, char ***args, int arglen) {
     assert(*args != NULL);
 
     if (strcmp(cmd, SET_COMMAND) == 0) {
-        if (arglen != 3) {
-            printf("set requires one and only one argument.\n");
-        } else {
-            char *firstArg = strdup((*args)[1]);
-            int equalsIndex = 0;
-            int length = strlen(firstArg);
-
-            if (firstArg[0] == '$') {
-                while (equalsIndex < length && firstArg[equalsIndex] != '=') {
-                    equalsIndex++;
-                }
-
-                if (equalsIndex == length - 1) {
-                    printf("Cannot set an empty shell variable.\n");
-                } else if (equalsIndex == length) {
-                    printf("Shell variables must be set with an equals character\n");
-                } else {
-                    // This is the only case where we add the shell variable
-                    char *key = malloc(sizeof(char) * equalsIndex);
-                    char *value = malloc(sizeof(char) * (length - equalsIndex));
-
-                    // Have to manually add a null terminator here
-                    strncpy(key, &firstArg[1], equalsIndex - 1);
-                    key[equalsIndex - 1] = '\0';
-                    // Null terminator is copied over automatically here
-                    strncpy(value, &firstArg[equalsIndex + 1], length - equalsIndex);
-
-                    // Finally, add the new shell variable
-                    addShellVar(key, value);
-                    printf("Variable %s updated.\n", key);
-
-                    free(key);
-                    free(value);
-                }
-            } else {
-                printf("Shell variables must be set starting with a $\n");
-            }
-
-            free(firstArg);
-        }
+        // User used set command, try to set shell variable:
+        setShellVariable(cmd, args, arglen);
     } else {
         // Substitute any shell variables...
 
@@ -230,6 +192,62 @@ void executeUserCommand(char *cmd, char ***args, int arglen) {
                 printf("Unrecognized command.\n");
             }
         }
+    }
+}
+
+
+/**
+ * Try to set a new shell variable from the user's command and args.
+ *
+ * @param char *cmd: The user's command
+ * @param char ***args: The user's arguments in execv format
+ * @param int arglen: The length of the args array
+ */
+void setShellVariable(char *cmd, char ***args, int arglen) {
+    assert(cmd != NULL);
+    assert(args != NULL);
+    assert(*args != NULL);
+    assert(cmd == SET_COMMAND && "Command must be \"set\"");
+
+    if (arglen != 3) {
+        printf("set requires one and only one argument.\n");
+    } else {
+        char *firstArg = strdup((*args)[1]);
+        int equalsIndex = 0;
+        int length = strlen(firstArg);
+
+        if (firstArg[0] == '$') {
+            while (equalsIndex < length && firstArg[equalsIndex] != '=') {
+                equalsIndex++;
+            }
+
+            if (equalsIndex == length - 1) {
+                printf("Cannot set an empty shell variable.\n");
+            } else if (equalsIndex == length) {
+                printf("Shell variables must be set with an equals character\n");
+            } else {
+                // This is the only case where we add the shell variable
+                char *key = malloc(sizeof(char) * equalsIndex);
+                char *value = malloc(sizeof(char) * (length - equalsIndex));
+
+                // Have to manually add a null terminator here
+                strncpy(key, &firstArg[1], equalsIndex - 1);
+                key[equalsIndex - 1] = '\0';
+                // Null terminator is copied over automatically here
+                strncpy(value, &firstArg[equalsIndex + 1], length - equalsIndex);
+
+                // Finally, add the new shell variable
+                addShellVar(key, value);
+                printf("Variable %s updated.\n", key);
+
+                free(key);
+                free(value);
+            }
+        } else {
+            printf("Shell variables must be set starting with a $\n");
+        }
+
+        free(firstArg);
     }
 }
 
