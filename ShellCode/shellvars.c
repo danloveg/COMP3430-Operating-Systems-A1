@@ -3,7 +3,7 @@
  *
  * Author: Daniel Lovegrove
  *
- * Version: January 20/2018
+ * Version: January 21/2018
  *
  * Purpose: Support adding and retrieving of shell variables. Stores key-value
  * pairs in a List (rather than the more typical hash table).
