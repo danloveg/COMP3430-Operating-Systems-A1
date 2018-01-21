@@ -29,30 +29,16 @@ bool substituteShellVariables(char ***args, int arglen);
 
 
 int main(int argc, char *argv[]) {
-    // Create character buffers
     char inBuf[MAX_INPUT_LEN] = "";
     char commandBuf[MAX_INPUT_LEN] = "";
     char *userInput = &inBuf[0];
     char *command = &commandBuf[0];
     char **args;
-
     int argCount;
 
     // Enable shell variables
     initShellVarProg();
-
-    // Read shell variables from shell_init and add them
-    if (openShellInitFile() == 0) {
-        char *line = NULL;
-
-        do {
-            line = readFileString();
-            tryAddVariable(line, SUPPRESS_OUTPUT);
-            free(line);
-        } while (line != NULL);
-
-        closeShellInitFile();
-    }
+    loadShellVariablesFromFile();
 
     printf("$ ");
 
@@ -79,6 +65,25 @@ int main(int argc, char *argv[]) {
 
     quitShellVarProg();
     exit(0);
+}
+
+
+/**
+ * Loads the shell variables from the file .shell_init at the user's home
+ * directory.
+ */
+void loadShellVariablesFromFile() {
+    if (openShellInitFile() == 0) {
+        char *line = NULL;
+
+        do {
+            line = readFileString();
+            tryAddVariable(line, SUPPRESS_OUTPUT);
+            free(line);
+        } while (line != NULL);
+
+        closeShellInitFile();
+    }
 }
 
 

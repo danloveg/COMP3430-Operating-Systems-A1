@@ -19,7 +19,7 @@
 #define SUPPRESS_OUTPUT 2
 
 void freeArray(void **ary, int len);
-
+void loadShellVariablesFromFile();
 void getCommandWithArgs(char *input, char *del, char *cmd, char ***args, int *arglen);
 void executeUserCommand(char *cmd, char ***args, int arglen);
 
