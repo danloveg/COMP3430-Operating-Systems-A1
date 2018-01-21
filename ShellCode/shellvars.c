@@ -71,7 +71,7 @@ void addShellVar(char *key, char *value) {
 
     char *exists = getShellVar(key);
 
-    // Don't add if the variable is already there
+    // If key doesn't exist, add it with value
     if (exists == NULL) {
 
         // Double the size of the array if need be
@@ -90,7 +90,7 @@ void addShellVar(char *key, char *value) {
 
         shellVarList -> shellVariables[shellVarList -> currIndex++] = newObj;
     } else {
-        // Find the index of the key
+        // If the key does exist, update the value
         int i, found = 0;
 
         while (found == 0 && i < shellVarList -> currIndex) {
