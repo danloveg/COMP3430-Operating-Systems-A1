@@ -40,6 +40,9 @@ int main(int argc, char *argv[]) {
     // Enable shell variables
     initShellVarProg();
 
+    openShellInitFile();
+    closeShellInitFile();
+
     printf("$ ");
 
     // Loop until we get CTRL-D

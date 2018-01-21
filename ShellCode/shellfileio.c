@@ -12,9 +12,13 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <pwd.h>
 #include "shellfileio.h"
+
+// Static file pointer
+FILE *filePtr = NULL;
 
 
 /**
@@ -24,7 +28,7 @@
  * @returns int: 0 if file was found and opened, 1 if file not found/error
  */
 int openShellInitFile() {
-    int fileOpened = 1;
+    int openSuccess = 1;
 
     char *userHomeDirectory = getenv("HOME");
 
@@ -32,7 +36,30 @@ int openShellInitFile() {
         userHomeDirectory = getpwuid(getuid()) -> pw_dir;
     }
 
-    return fileOpened;
+    // Construct the absolute path to the shell init file
+    int homeDirLength = strlen(userHomeDirectory);
+    int shellInitLength = strlen(SHELL_INIT_FILE_NAME);
+    int absolutePathLength = homeDirLength + shellInitLength;
+
+    char *filename = malloc((absolutePathLength + 2) * sizeof(char));
+    assert(filename != NULL);
+    strcpy(filename, userHomeDirectory);
+    filename[homeDirLength] = '/';
+    strcpy(&filename[homeDirLength + 1], SHELL_INIT_FILE_NAME);
+    filename[absolutePathLength + 1] = '\0';
+
+    // Check to see if we can open the file
+    if (access(filename, F_OK) != -1) {
+        filePtr = fopen(filename, "r");
+        if (filePtr != NULL) {
+            openSuccess = 0;
+        }
+    } else {
+        printf("Error: Could not open %s\n", filename);
+    }
+
+    free(filename);
+    return openSuccess;
 }
 
 
@@ -58,5 +85,11 @@ void readFileString(char *str) {
  * @returns int: 0 if file closed, 1 if there was an error.
  */
 int closeShellInitFile() {
-    return 1;
+    int closeSuccess = 0;
+
+    if (filePtr != NULL) {
+        fclose(filePtr);
+    }
+
+    return closeSuccess;
 }
