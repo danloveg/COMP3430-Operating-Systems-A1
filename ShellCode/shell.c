@@ -20,6 +20,7 @@
 #include "shell.h"
 #include "shellvars.h"
 #include "shellstring.h"
+#include "shellfileio.h"
 
 
 void setShellVariable(char *cmd, char ***args, int arglen);

@@ -10,7 +10,12 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <pwd.h>
 #include "shellfileio.h"
+
 
 /**
  * Tries to open a shell initialization file called .shell_init in the user's
@@ -19,7 +24,15 @@
  * @returns int: 0 if file was found and opened, 1 if file not found/error
  */
 int openShellInitFile() {
-    return 1;
+    int fileOpened = 1;
+
+    char *userHomeDirectory = getenv("HOME");
+
+    if (userHomeDirectory == NULL) {
+        userHomeDirectory = getpwuid(getuid()) -> pw_dir;
+    }
+
+    return fileOpened;
 }
 
 
