@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
             getCommandWithArgs(userInput, DELIMITER, command, &args, &argCount);
 
             // Execute the command
-            executeUserCommand(command, &args);
+            executeUserCommand(command, &args, argCount);
 
             // Clean up for next iteration
             freeArray((void**) args, argCount);
@@ -156,7 +156,7 @@ void getCommandWithArgs(char *input, char *delim, char *cmd, char ***args, int *
 
 
 /**
- * Execute the user's command and arguments with execvp.
+ * Execute the user's command with arguments.
  *
  * @param char *cmd: The string containing the user's command
  * @param char ***args: A pointer to an array of strings holding the user's
@@ -166,23 +166,69 @@ void getCommandWithArgs(char *input, char *delim, char *cmd, char ***args, int *
  *     cmd: "/bin/ls"
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
-void executeUserCommand(char *cmd, char ***args) {
+void executeUserCommand(char *cmd, char ***args, int arglen) {
     int pid, returnStatus;
 
     assert(cmd != NULL);
     assert(args != NULL);
     assert(*args != NULL);
 
-    // Fork the current process
-    if ((pid = fork()) == 0) {
-        returnStatus = execvp(cmd, *args);
-        exit(returnStatus);
-    } else {
-        waitpid(pid, &returnStatus, 0);
-        assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
+    if (strcmp(cmd, SET_COMMAND) == 0) {
+        if (arglen != 3) {
+            printf("set requires one and only one argument.\n");
+        } else {
+            char *firstArg = strdup((*args)[1]);
+            int equalsIndex = 0;
+            int length = strlen(firstArg);
 
-        if (returnStatus == 65280 && cmd != NULL) {
-            printf("Unrecognized command.\n");
+            if (firstArg[0] == '$') {
+                while (equalsIndex < length && firstArg[equalsIndex] != '=') {
+                    equalsIndex++;
+                }
+
+                if (equalsIndex == length - 1) {
+                    printf("Cannot set an empty shell variable.\n");
+                } else if (equalsIndex == length) {
+                    printf("Shell variables must be set with an equals character\n");
+                } else {
+                    // This is the only case where we add the shell variable
+                    char *key = malloc(sizeof(char) * equalsIndex);
+                    char *value = malloc(sizeof(char) * (length - equalsIndex));
+
+                    // Have to manually add a null terminator here
+                    strncpy(key, &firstArg[1], equalsIndex - 1);
+                    key[equalsIndex - 1] = '\0';
+                    // Null terminator is copied over automatically here
+                    strncpy(value, &firstArg[equalsIndex + 1], length - equalsIndex);
+
+                    // Finally, add the new shell variable
+                    addShellVar(key, value);
+                    printf("Variable %s updated.\n", key);
+
+                    free(key);
+                    free(value);
+                }
+            } else {
+                printf("Shell variables must be set starting with a $\n");
+            }
+
+            free(firstArg);
+        }
+    } else {
+        // Substitute any shell variables...
+
+
+        // Fork the current process
+        if ((pid = fork()) == 0) {
+            returnStatus = execvp(cmd, *args);
+            exit(returnStatus);
+        } else {
+            waitpid(pid, &returnStatus, 0);
+            assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
+
+            if (returnStatus == 65280 && cmd != NULL) {
+                printf("Unrecognized command.\n");
+            }
         }
     }
 }
