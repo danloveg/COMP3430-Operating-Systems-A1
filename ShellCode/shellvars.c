@@ -5,9 +5,8 @@
  *
  * Version: January 20/2018
  *
- * Purpose: Support adding and retrieving of shell variables. I would have liked
- * to have used a hash table to store key-value pairs but time did not permit me
- * to implement one so I just use a List to store key-value pairs.
+ * Purpose: Support adding and retrieving of shell variables. Stores key-value
+ * pairs in a List (rather than the more typical hash table).
  */
 
 

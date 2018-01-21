@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "shell.h"
+#include "shellvars.h"
 
 
 int main(int argc, char *argv[]) {
@@ -29,6 +30,9 @@ int main(int argc, char *argv[]) {
     char **args;
 
     int argCount;
+
+    // Enable shell variables
+    initShellVarProg();
 
     printf("$ ");
 
@@ -53,6 +57,8 @@ int main(int argc, char *argv[]) {
     }
 
     printf("\n");
+
+    quitShellVarProg();
     exit(0);
 }
 
