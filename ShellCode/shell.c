@@ -21,6 +21,10 @@
 #include "shellvars.h"
 
 
+void setShellVariable(char *cmd, char ***args, int arglen);
+bool substituteShellVariables(char ***args, int arglen);
+
+
 int main(int argc, char *argv[]) {
     // Create character buffers
     char inBuf[MAX_INPUT_LEN] = "";
@@ -178,18 +182,21 @@ void executeUserCommand(char *cmd, char ***args, int arglen) {
         setShellVariable(cmd, args, arglen);
     } else {
         // Substitute any shell variables...
+        bool substitutionPassed = substituteShellVariables(args, arglen);
 
+        // Execute if all shell variables were valid
+        if (substitutionPassed == true) {
+            // Fork the current process
+            if ((pid = fork()) == 0) {
+                returnStatus = execvp(cmd, *args);
+                exit(returnStatus);
+            } else {
+                waitpid(pid, &returnStatus, 0);
+                assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
 
-        // Fork the current process
-        if ((pid = fork()) == 0) {
-            returnStatus = execvp(cmd, *args);
-            exit(returnStatus);
-        } else {
-            waitpid(pid, &returnStatus, 0);
-            assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
-
-            if (returnStatus == 65280 && cmd != NULL) {
-                printf("Unrecognized command.\n");
+                if (returnStatus == 65280 && cmd != NULL) {
+                    printf("Unrecognized command.\n");
+                }
             }
         }
     }
@@ -207,7 +214,6 @@ void setShellVariable(char *cmd, char ***args, int arglen) {
     assert(cmd != NULL);
     assert(args != NULL);
     assert(*args != NULL);
-    assert(cmd == SET_COMMAND && "Command must be \"set\"");
 
     if (arglen != 3) {
         printf("set requires one and only one argument.\n");
@@ -249,6 +255,45 @@ void setShellVariable(char *cmd, char ***args, int arglen) {
 
         free(firstArg);
     }
+}
+
+
+/**
+ * Search and replace shell variables in argument list. Returns true if all vars
+ * were found and successfully replaced.
+ *
+ * @param char ***args: Array of string arguments
+ * @returns bool: true if successful, false if not
+ */
+bool substituteShellVariables(char ***args, int arglen) {
+    int i;
+    bool success = true;
+
+    for (i = 0; i < arglen && success == true; i++) {
+        // Search for commands starting with $
+        if ((*args)[i] != NULL && ((*args)[i])[0] == '$') {
+
+            int length = strlen((*args)[i]);
+            char *shellVarKey = malloc(length * sizeof(char));
+            strncpy(shellVarKey, &((*args)[i])[1], length);
+
+            // Try to find value associated with key
+            char *shellVarValue = getShellVar(shellVarKey);
+
+            if (shellVarValue == NULL) {
+                printf("Could not find variable %s\n", shellVarKey);
+                success = false;
+            } else {
+                // Variable is found, replace it in the argument array
+                free((*args)[i]);
+                (*args)[i] = strdup(shellVarValue);
+            }
+
+            free(shellVarKey);
+        }
+    }
+
+    return success;
 }
 
 
