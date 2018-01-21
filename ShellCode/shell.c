@@ -23,7 +23,8 @@
 #include "shellfileio.h"
 
 
-void setShellVariable(char *cmd, char ***args, int arglen);
+void setShellVariableFromArgs(char *cmd, char ***args, int arglen);
+void tryAddVariable(char *varStatement, int options);
 bool substituteShellVariables(char ***args, int arglen);
 
 
@@ -40,11 +41,13 @@ int main(int argc, char *argv[]) {
     // Enable shell variables
     initShellVarProg();
 
+    // Read shell variables from shell_init and add them
     if (openShellInitFile() == 0) {
         char *line = NULL;
 
         do {
             line = readFileString();
+            tryAddVariable(line, SUPPRESS_OUTPUT);
             free(line);
         } while (line != NULL);
 
@@ -158,7 +161,7 @@ void executeUserCommand(char *cmd, char ***args, int arglen) {
 
     if (strcmp(cmd, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
-        setShellVariable(cmd, args, arglen);
+        setShellVariableFromArgs(cmd, args, arglen);
     } else {
         // Substitute any shell variables...
         bool substitutionPassed = substituteShellVariables(args, arglen);
@@ -183,13 +186,13 @@ void executeUserCommand(char *cmd, char ***args, int arglen) {
 
 
 /**
- * Try to set a new shell variable from the user's command and args.
+ * Set a new shell variable from the user's command and args.
  *
  * @param char *cmd: The user's command
  * @param char ***args: The user's arguments in execv format
  * @param int arglen: The length of the args array
  */
-void setShellVariable(char *cmd, char ***args, int arglen) {
+void setShellVariableFromArgs(char *cmd, char ***args, int arglen) {
     assert(cmd != NULL);
     assert(args != NULL);
     assert(*args != NULL);
@@ -197,7 +200,22 @@ void setShellVariable(char *cmd, char ***args, int arglen) {
     if (arglen != 3) {
         printf("set requires one and only one argument.\n");
     } else {
-        char *firstArg = strdup((*args)[1]);
+        tryAddVariable((*args)[1], INTERACTIVE);
+    }
+}
+
+
+/**
+ * Try to add one new variable.
+ *
+ * @param char *varStatement: A variable statement like $HOME=/home
+ * @param int options: Allows the possibility of suppressing stdout by passing
+ *     SUPPRESS_OUTPUT. This will only suppress the success message, errors will
+ *     still print. Otherwise, pass INTERACTIVE for interactivity.
+ */
+void tryAddVariable(char *varStatement, int options) {
+    if (varStatement != NULL) {
+        char *firstArg = strdup(varStatement);
         int equalsIndex = 0;
         int length = strlen(firstArg);
 
@@ -223,7 +241,10 @@ void setShellVariable(char *cmd, char ***args, int arglen) {
 
                 // Finally, add the new shell variable
                 addShellVar(key, value);
-                printf("Variable %s updated.\n", key);
+
+                if (options != SUPPRESS_OUTPUT) {
+                    printf("Variable %s updated.\n", key);
+                }
 
                 free(key);
                 free(value);
@@ -297,4 +318,3 @@ void freeArray(void **ary, int len) {
         ary = NULL;
     }
 }
-

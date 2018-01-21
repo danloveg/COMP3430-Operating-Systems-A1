@@ -15,6 +15,8 @@
 #define MAX_INPUT_LEN 80
 #define DELIMITER " "
 #define SET_COMMAND "set"
+#define INTERACTIVE 1
+#define SUPPRESS_OUTPUT 2
 
 void freeArray(void **ary, int len);
 
