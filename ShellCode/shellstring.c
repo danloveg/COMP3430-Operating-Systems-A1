@@ -47,6 +47,32 @@ int countTokens(const char *str, const char *del) {
 
 
 /**
+ * Get the index of a specific string in an array of strings.
+ *
+ * @param const char ***strary: Pointer to the array of strings to search in
+ * @param int strarylen: Length of strary
+ * @param const char *searchitem: The string to search for in the array
+ * @returns int: The index of the string in the array. -1 if not found.
+ */
+int getStringIndex(const char ***strary, int strarylen, const char *searchitem) {
+    int i;
+    int foundIndex = -1;
+
+    assert(strary != NULL);
+    assert(strarylen > -1);
+    assert(searchItem != NULL);
+
+    for (i = 0; i < strarylen && foundIndex == -1; i++) {
+        if ((*strary)[0] != NULL && strcmp((*strary)[i], searchitem) == 0) {
+            foundIndex = i;
+        }
+    }
+
+    return foundIndex;
+}
+
+
+/**
  * Remove a trailing newline character from a string.
  * 
  * @param char *str: The string

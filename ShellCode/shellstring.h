@@ -13,6 +13,7 @@
 #define SHELL_STRING_C
 
 int countTokens(const char *str, const char *del);
+int getStringIndex(const char ***strary, int strarylen, const char *search);
 void removeTrailingNewline(char *str);
 
 #endif
