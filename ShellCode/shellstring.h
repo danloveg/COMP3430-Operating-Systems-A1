@@ -12,8 +12,10 @@
 
 #define SHELL_STRING_C
 
+#include "shell.h"
+
 int countTokens(const char *str, const char *del);
-int getStringIndex(const char ***strary, int strarylen, const char *search);
+int getStringIndex(char ***strary, int strarylen, const char *search);
 void removeTrailingNewline(char *str);
 
 #endif
