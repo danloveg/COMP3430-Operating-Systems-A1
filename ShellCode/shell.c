@@ -23,6 +23,9 @@
 #include "shellfileio.h"
 
 
+void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind);
+
+
 int main(int argc, char *argv[]) {
     char inBuf[MAX_INPUT_LEN] = "";
     char commandBuf1[MAX_INPUT_LEN] = "";
@@ -95,8 +98,8 @@ void loadShellVariablesFromFile() {
  * | or >, then two sets of commands and args are returned. If no pipe operator,
  * then cmd2, args2, and arglen2 are NULL.
  *
- * NOTE: ***args is assigned a pointer to a dynamically allocated string array
- *       and so must be deallocated when finished with.
+ * NOTE: ***args1 and ***args2 are assigned pointers to dynamically allocated
+ *     string arrays and so must be deallocated when finished with.
  *
  * @param char *input: The user's input string
  * @param char *delim: The delimiter demarcating arguments (normally a space)
@@ -115,7 +118,8 @@ void getCommandWithArgs(char *input, char *delim,
 
     char tokBuf[MAX_INPUT_LEN] = "";
     char *token = &tokBuf[0];
-    int i;
+    int i, j;
+    int pipeIndex = -1;
 
     // Set second set of arguments to NULL
     *pipeop = NULL;
@@ -157,6 +161,24 @@ void getCommandWithArgs(char *input, char *delim,
                 assert((*args1)[i] != NULL);
                 (*args1)[i] = (char) 0;
             }
+        }
+    }
+
+    getPipeop(args1, *arglen1, pipeop, &pipeIndex);
+
+    // If we have a pipe, we need to do some pointer re-pointing
+    if (*pipeop != NULL && (*args1)[pipeIndex + 1] != NULL) {
+        *arglen2 = *arglen1 - pipeIndex - 1;
+        assert(*arglen2 > -1);
+        (*args1)[pipeIndex] = NULL;
+        *args2 = malloc(*arglen2 * sizeof(char*));
+        assert(*args2 != NULL);
+        strcpy(*cmd2, (*args1)[pipeIndex + 1]);
+
+        // Redirect pointers
+        for (j = pipeIndex + 1, i = 0; j < *arglen1; j++, i++) {
+            (*args2)[i] = (*args1)[j];
+            (*args1)[j] = NULL;
         }
     }
 }
@@ -229,6 +251,24 @@ void setShellVariableFromArgs(char *cmd, char ***args, int arglen) {
     } else {
         tryAddVariable((*args)[1], INTERACTIVE);
     }
+}
+
+
+/**
+ * Get a pipe operation from a string array and the index of it in the array.
+ *
+ * @param char ***args: The string array
+ * @param int arglen: The length of the string array
+ * @param char **pipeop: Pointer to pipe operation. Given NULL if no pipe
+ * @param int *pipeind: Pointer to pipe index. Given -1 if no pipe
+ */
+void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind) {
+    *pipeind = -1;
+    *pipeop = NULL;
+
+    if ((*pipeind = getStringIndex(args, arglen, ">")) != -1) *pipeop = ">";
+    else if((*pipeind = getStringIndex(args, arglen, ">>")) != -1) *pipeop = ">>";
+    else if((*pipeind = getStringIndex(args, arglen, "|")) != -1) *pipeop = "|";
 }
 
 
