@@ -25,11 +25,15 @@
 
 int main(int argc, char *argv[]) {
     char inBuf[MAX_INPUT_LEN] = "";
-    char commandBuf[MAX_INPUT_LEN] = "";
+    char commandBuf1[MAX_INPUT_LEN] = "";
+    char commandBuf2[MAX_INPUT_LEN] = "";
     char *userInput = &inBuf[0];
-    char *command = &commandBuf[0];
-    char **args;
-    int argCount;
+    char *command1 = &commandBuf1[0];
+    char *command2 = &commandBuf2[0];
+    char **args1 = NULL;
+    char **args2 = NULL;
+    int argCount1;
+    int argCount2;
 
     // Enable shell variables
     initShellVarProg();
@@ -44,13 +48,14 @@ int main(int argc, char *argv[]) {
 
         if (userInput[0] != '\0') {
             // Get command, arguments, and arguments length
-            getCommandWithArgs(userInput, DELIMITER, command, &args, &argCount);
+            getCommandWithArgs(userInput, DELIMITER, &command1, &args1, &argCount1, &command2, &args2, &argCount2);
 
             // Execute the command
-            executeUserCommand(command, &args, argCount);
+            executeUserCommand(command1, &args1, argCount1, command2, &args2, argCount2);
 
             // Clean up for next iteration
-            freeArray((void**) args, argCount);
+            freeArray((void**) args1, argCount1);
+            freeArray((void**) args2, argCount2);
         }
 
         printf("$ ");
@@ -84,57 +89,69 @@ void loadShellVariablesFromFile() {
 
 /**
  * Extract the user's command and arguments from the input string, as well as
- * the length of the argument array.
+ * the length of the argument array. If there was a pipe operator used, such as
+ * | or >, then two sets of commands and args are returned. If no pipe operator,
+ * then cmd2, args2, and arglen2 are NULL.
  *
  * NOTE: ***args is assigned a pointer to a dynamically allocated string array
  *       and so must be deallocated when finished with.
  *
  * @param char *input: The user's input string
  * @param char *delim: The delimiter demarcating arguments (normally a space)
- * @param char *cmd: A string pointer that gets assigned to the command
- *      extracted from the input string
- * @param char ***args: A pointer to an array of strings that gets assigned to
+ * @param char **cmd1: A pointer to a string that gets assigned to the command
+ *     extracted from the input string
+ * @param char ***args1: A pointer to an array of strings that gets assigned to
  *      a dynamically allocated string array containing the command line args
- * @param int *arglen: The length of the dynamic args array returned
+ * @param int *arglen1: The length of args1
+ * @param char **cmd2: If piped, a pointer to the second command string
+ * @param char ***args2: If piped, a pointer to an array of the second arg list
+ * @param int *arglen2: If piped, the length of args2
  */
-void getCommandWithArgs(char *input, char *delim, char *cmd, char ***args, int *arglen) {
+void getCommandWithArgs(char *input, char *delim,
+    char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2) {
+
     char tokBuf[MAX_INPUT_LEN] = "";
     char *token = &tokBuf[0];
     int i;
+
+    // Set second set of arguments to NULL
+    *cmd2 = NULL;
+    *args2 = NULL;
+    *arglen2 = -1;
 
     assert(input != NULL && "input string cannot be NULL");
     assert(delim != NULL && "delimiter cannot be NULL");
 
     if (input != NULL && delim != NULL) {
         // We need to add one for the null item at the end of the array
-        *arglen = countTokens(input, delim) + 1;
-        assert(*arglen > 0);
-        *args = malloc(*arglen * sizeof(char *));
-        assert(*args != NULL);
+        *arglen1 = countTokens(input, delim) + 1;
+        assert(*arglen1 > 0);
+        *args1 = malloc(*arglen1 * sizeof(char *));
+        assert(*args1 != NULL);
 
         // Fill dynamic array, with a zero as the last item
-        for (i = 0; i < *arglen; i++) {
+        for (i = 0; i < *arglen1; i++) {
 
             // Get token
             if (i == 0) {
                 token = strtok(input, delim);
                 assert(token != NULL);
-                strcpy(cmd, token);
-                assert(cmd != NULL);
-            } else if (i < *arglen - 1) {
+                strcpy(*cmd1, token);
+                assert(*cmd1 != NULL);
+            } else if (i < *arglen1 - 1) {
                 token = strtok(NULL, delim);
                 assert(token != NULL);
             }
 
             // Put token (or zero) into array
-            if (i < *arglen - 1) {
-                (*args)[i] = malloc(strlen(token) + 1);
-                assert((*args)[i] != NULL);
-                strcpy((*args)[i], token);
+            if (i < *arglen1 - 1) {
+                (*args1)[i] = malloc(strlen(token) + 1);
+                assert((*args1)[i] != NULL);
+                strcpy((*args1)[i], token);
             } else {
-                (*args)[i] = malloc(sizeof(char));
-                assert((*args)[i] != NULL);
-                (*args)[i] = (char) 0;
+                (*args1)[i] = malloc(sizeof(char));
+                assert((*args1)[i] != NULL);
+                (*args1)[i] = (char) 0;
             }
         }
     }
@@ -142,41 +159,46 @@ void getCommandWithArgs(char *input, char *delim, char *cmd, char ***args, int *
 
 
 /**
- * Execute the user's command with arguments.
+ * Execute the user's command with arguments. Supports a single pipe. If command
+ * is not piped, pass NULL for cmd2, and args2.
  *
- * @param char *cmd: The string containing the user's command
- * @param char ***args: A pointer to an array of strings holding the user's
- *     command along with arguments, and a zero at the end.
+ * @param char *cmd1: The string containing the user's first command
+ * @param char ***args1: A pointer to an array of strings holding the user's
+ *     first command along with arguments, and a zero at the end.
+ * @param int arglen1: The length of args1
+ * @param char *cmd2: If piped, the string containing the user's second command
+ * @param char ***arg2: If piped, the second set of arguments
+ * @param int arglen2: If piped, the length of args2
  *
  * Example cmd and args for execvp (because it can be tricky)
  *     cmd: "/bin/ls"
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
-void executeUserCommand(char *cmd, char ***args, int arglen) {
+void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *cmd2, char ***arg2, int arglen2) {
     int pid, returnStatus;
 
-    assert(cmd != NULL);
-    assert(args != NULL);
-    assert(*args != NULL);
+    assert(cmd1 != NULL);
+    assert(args1 != NULL);
+    assert(*args1 != NULL);
 
-    if (strcmp(cmd, SET_COMMAND) == 0) {
+    if (strcmp(cmd1, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
-        setShellVariableFromArgs(cmd, args, arglen);
+        setShellVariableFromArgs(cmd1, args1, arglen1);
     } else {
         // Substitute any shell variables...
-        bool substitutionPassed = substituteShellVariables(args, arglen);
+        bool substitutionPassed = substituteShellVariables(args1, arglen1);
 
         // Execute if all shell variables were valid
         if (substitutionPassed == true) {
             // Fork the current process
             if ((pid = fork()) == 0) {
-                returnStatus = execvp(cmd, *args);
+                returnStatus = execvp(cmd1, *args1);
                 exit(returnStatus);
             } else {
                 waitpid(pid, &returnStatus, 0);
                 assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
 
-                if (returnStatus == 65280 && cmd != NULL) {
+                if (returnStatus == 65280 && cmd1 != NULL) {
                     printf("Unrecognized command.\n");
                 }
             }
