@@ -5,9 +5,9 @@
  *
  * Version: January 22/2018
  *
- * Purpose: Get familiar with fork and exec. This program takes user input and
- * executes what the user enters until they enter Ctrl-D, at which point the
- * program exits.
+ * Purpose: Provide the functionality of a mini shell. Takes input until the
+ * user enters CTRL-D at the prompt. Allows the use of shell variables, as well
+ * as two command pipes and stdout redirection.
  */
 
 
@@ -27,9 +27,11 @@ int main(int argc, char *argv[]) {
     char inBuf[MAX_INPUT_LEN] = "";
     char commandBuf1[MAX_INPUT_LEN] = "";
     char commandBuf2[MAX_INPUT_LEN] = "";
+    char pipeopBuf[3] = "";
     char *userInput = &inBuf[0];
     char *command1 = &commandBuf1[0];
     char *command2 = &commandBuf2[0];
+    char *pipeOperator = &pipeopBuf[0];
     char **args1 = NULL;
     char **args2 = NULL;
     int argCount1;
@@ -48,10 +50,10 @@ int main(int argc, char *argv[]) {
 
         if (userInput[0] != '\0') {
             // Get command, arguments, and arguments length
-            getCommandWithArgs(userInput, DELIMITER, &command1, &args1, &argCount1, &command2, &args2, &argCount2);
+            getCommandWithArgs(userInput, DELIMITER, &command1, &args1, &argCount1, &pipeOperator, &command2, &args2, &argCount2);
 
             // Execute the command
-            executeUserCommand(command1, &args1, argCount1, command2, &args2, argCount2);
+            executeUserCommand(command1, &args1, argCount1, pipeOperator, command2, &args2, argCount2);
 
             // Clean up for next iteration
             freeArray((void**) args1, argCount1);
@@ -103,18 +105,20 @@ void loadShellVariablesFromFile() {
  * @param char ***args1: A pointer to an array of strings that gets assigned to
  *      a dynamically allocated string array containing the command line args
  * @param int *arglen1: The length of args1
+ * @param char **pipeop: If piped, the operator used. |, >, or >>
  * @param char **cmd2: If piped, a pointer to the second command string
  * @param char ***args2: If piped, a pointer to an array of the second arg list
  * @param int *arglen2: If piped, the length of args2
  */
 void getCommandWithArgs(char *input, char *delim,
-    char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2) {
+    char **cmd1, char ***args1, int *arglen1, char **pipeop, char **cmd2, char ***args2, int *arglen2) {
 
     char tokBuf[MAX_INPUT_LEN] = "";
     char *token = &tokBuf[0];
     int i;
 
     // Set second set of arguments to NULL
+    *pipeop = NULL;
     *cmd2 = NULL;
     *args2 = NULL;
     *arglen2 = -1;
@@ -166,6 +170,7 @@ void getCommandWithArgs(char *input, char *delim,
  * @param char ***args1: A pointer to an array of strings holding the user's
  *     first command along with arguments, and a zero at the end.
  * @param int arglen1: The length of args1
+ * @param char *pipeop: If piped, the operator used. |, >, or >>
  * @param char *cmd2: If piped, the string containing the user's second command
  * @param char ***arg2: If piped, the second set of arguments
  * @param int arglen2: If piped, the length of args2
@@ -174,7 +179,7 @@ void getCommandWithArgs(char *input, char *delim,
  *     cmd: "/bin/ls"
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
-void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *cmd2, char ***arg2, int arglen2) {
+void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***arg2, int arglen2) {
     int pid, returnStatus;
 
     assert(cmd1 != NULL);

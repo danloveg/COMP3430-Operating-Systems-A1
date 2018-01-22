@@ -3,7 +3,7 @@
  *
  * Author: Daniel Lovegrove
  *
- * Version: January 21/2018
+ * Version: January 22/2018
  *
  * Definitions for shell.c
  */
@@ -20,8 +20,8 @@ void freeArray(void **ary, int len);
 void loadShellVariablesFromFile();
 void setShellVariableFromArgs(char *cmd, char ***args, int arglen);
 void getCommandWithArgs(char *input, char *del,
-    char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2);
-void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *cmd2, char ***args2, int arglen2);
+    char **cmd1, char ***args1, int *arglen1,  char **pipeop, char **cmd2, char ***args2, int *arglen2);
+void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2);
 
 typedef enum __BOOL { false, true } bool;
 
