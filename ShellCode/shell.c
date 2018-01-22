@@ -123,7 +123,6 @@ void getCommandWithArgs(char *input, char *delim,
 
     // Set second set of arguments to NULL
     *pipeop = NULL;
-    *cmd2 = NULL;
     *args2 = NULL;
     *arglen2 = -1;
 
@@ -170,6 +169,9 @@ void getCommandWithArgs(char *input, char *delim,
     if (*pipeop != NULL && (*args1)[pipeIndex + 1] != NULL) {
         *arglen2 = *arglen1 - pipeIndex - 1;
         assert(*arglen2 > -1);
+
+        // We don't want the operator as a part of the list
+        free((*args1)[pipeIndex]);
         (*args1)[pipeIndex] = NULL;
         *args2 = malloc(*arglen2 * sizeof(char*));
         assert(*args2 != NULL);
