@@ -3,7 +3,7 @@
  *
  * Author: Daniel Lovegrove
  *
- * Version: January 21/2018
+ * Version: January 22/2018
  *
  * Purpose: Support adding and retrieving of shell variables. Stores key-value
  * pairs in a List (rather than the more typical hash table).
@@ -107,6 +107,102 @@ void addShellVar(char *key, char *value) {
     }
 
     free(exists);
+}
+
+
+/**
+ * Try to add one new variable.
+ * 
+ * Precondition: initShellVarProg() has been called.
+ *
+ * @param char *varStatement: A variable statement like $HOME=/home
+ * @param int options: Allows the possibility of suppressing stdout by passing
+ *     SUPPRESS_OUTPUT. This will only suppress the success message, errors will
+ *     still print. Otherwise, pass INTERACTIVE for interactivity.
+ */
+void tryAddVariable(char *varStatement, int options) {
+    if (varStatement != NULL) {
+        char *firstArg = strdup(varStatement);
+        int equalsIndex = 0;
+        int length = strlen(firstArg);
+
+        if (firstArg[0] == '$') {
+            while (equalsIndex < length && firstArg[equalsIndex] != '=') {
+                equalsIndex++;
+            }
+
+            if (equalsIndex == length - 1) {
+                printf("Cannot set an empty shell variable.\n");
+            } else if (equalsIndex == length) {
+                printf("Shell variables must be set with an equals character\n");
+            } else {
+                // This is the only case where we add the shell variable
+                char *key = malloc(sizeof(char) * equalsIndex);
+                char *value = malloc(sizeof(char) * (length - equalsIndex));
+
+                // Have to manually add a null terminator here
+                strncpy(key, &firstArg[1], equalsIndex - 1);
+                key[equalsIndex - 1] = '\0';
+                // Null terminator is copied over automatically here
+                strncpy(value, &firstArg[equalsIndex + 1], length - equalsIndex);
+
+                // Finally, add the new shell variable
+                addShellVar(key, value);
+
+                if (options != SUPPRESS_OUTPUT) {
+                    printf("Variable %s updated.\n", key);
+                }
+
+                free(key);
+                free(value);
+            }
+        } else {
+            printf("Shell variables must be set starting with a $\n");
+        }
+
+        free(firstArg);
+    }
+}
+
+
+/**
+ * Search and replace shell variables in argument list. Returns true if all vars
+ * were found and successfully replaced.
+ *
+ * Precondition: initShellVarProg() has been called.
+ * 
+ * @param char ***args: Array of string arguments
+ * @returns bool: true if successful, false if not
+ */
+bool substituteShellVariables(char ***args, int arglen) {
+    int i;
+    bool success = true;
+
+    for (i = 0; i < arglen && success == true; i++) {
+        // Search for commands starting with $
+        if ((*args)[i] != NULL && ((*args)[i])[0] == '$') {
+
+            int length = strlen((*args)[i]);
+            char *shellVarKey = malloc(length * sizeof(char));
+            strncpy(shellVarKey, &((*args)[i])[1], length);
+
+            // Try to find value associated with key
+            char *shellVarValue = getShellVar(shellVarKey);
+
+            if (shellVarValue == NULL) {
+                printf("Could not find variable %s\n", shellVarKey);
+                success = false;
+            } else {
+                // Variable is found, replace it in the argument array
+                free((*args)[i]);
+                (*args)[i] = strdup(shellVarValue);
+            }
+
+            free(shellVarKey);
+        }
+    }
+
+    return success;
 }
 
 

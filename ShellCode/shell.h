@@ -15,11 +15,10 @@
 #define MAX_INPUT_LEN 80
 #define DELIMITER " "
 #define SET_COMMAND "set"
-#define INTERACTIVE 1
-#define SUPPRESS_OUTPUT 2
 
 void freeArray(void **ary, int len);
 void loadShellVariablesFromFile();
+void setShellVariableFromArgs(char *cmd, char ***args, int arglen);
 void getCommandWithArgs(char *input, char *del, char *cmd, char ***args, int *arglen);
 void executeUserCommand(char *cmd, char ***args, int arglen);
 
