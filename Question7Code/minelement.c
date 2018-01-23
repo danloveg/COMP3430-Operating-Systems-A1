@@ -20,6 +20,8 @@ typedef struct __START_END {
 } StartEnd;
 
 void getArgs(int argc, char *argv[], int *numThreads, int *numElts);
+int findMin(unsigned int threadNumElts, unsigned int start, const int *ar);
+
 
 int main (int argc, char *argv[]) {
     // Get arguments
@@ -33,6 +35,27 @@ int main (int argc, char *argv[]) {
 
     // Clean up
     free(ar);
+}
+
+
+/**
+ * Find the minimum number in an array of ints.
+ * 
+ * @param unsigned int threadNumElts: The number of elements to look through
+ * @param unsigned int start: The starting index to look from
+ * @param const int *ar: Int array
+ */
+int findMin(unsigned int threadNumElts, unsigned int start, const int *ar) {
+    int i;
+    int min = ar[start];
+
+    for (i = start + 1; i < threadNumElts; i++) {
+        if (ar[i] < min) {
+            min = ar[i];
+        }
+    }
+
+    return min;
 }
 
 
