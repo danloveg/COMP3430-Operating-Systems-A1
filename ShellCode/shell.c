@@ -3,7 +3,7 @@
  *
  * Author: Daniel Lovegrove
  *
- * Version: January 22/2018
+ * Version: January 23/2018
  *
  * Purpose: Provide the functionality of a mini shell. Takes input until the
  * user enters CTRL-D at the prompt. Allows the use of shell variables, as well
@@ -23,7 +23,7 @@
 #include "shellvars.h"
 #include "shellstring.h"
 #include "shellfileio.h"
-#include "shellpipe.h"
+#include "shellexecute.h"
 
 // Internal prototypes
 void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind);

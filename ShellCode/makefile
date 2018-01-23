@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -g -Wall
 
 PROG = shell
-HEADERS = shell.h shellvars.h shellstring.h shellfileio.h shellpipe.h
-SOURCES = shell.c shellvars.c shellstring.c shellfileio.c shellpipe.c
+HEADERS = shell.h shellvars.h shellstring.h shellfileio.h shellexecute.h
+SOURCES = shell.c shellvars.c shellstring.c shellfileio.c shellexecute.c
 
 OBJDIR = object
 OBJECTS = $(OBJDIR)/shell.o $(OBJDIR)/shellvars.o $(OBJDIR)/shellstring.o $(OBJDIR)/shellfileio.o $(OBJDIR)/shellpipe.o
@@ -23,7 +23,7 @@ $(OBJDIR)/shellstring.o: shellstring.c $(HEADERS) $(OBJDIR)
 $(OBJDIR)/shellfileio.o: shellfileio.c $(HEADERS) $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/shellpipe.o: shellpipe.c $(HEADERS) $(OBJDIR)
+$(OBJDIR)/shellexecute.o: shellexecute.c $(HEADERS) $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR):

@@ -1,5 +1,5 @@
 /*
- * shellpipe.c
+ * shellexecute.c
  *
  * Author: Daniel Lovegrove
  *
@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "shellpipe.h"
+#include "shellexecute.h"
 
 
 /**

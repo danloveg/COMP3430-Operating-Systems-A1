@@ -1,5 +1,5 @@
 /*
- * shellpipe.h
+ * shellexecute.h
  *
  * Author: Daniel Lovegrove
  *
