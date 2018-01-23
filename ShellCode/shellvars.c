@@ -38,21 +38,15 @@ KeyValList *shellVarList = NULL;
  * Create dynamic data structure and initialize operation.
  */
 void initShellVarProg() {
-    int i;
-
     assert(shellVarList == NULL && "Failure, shell variable program already initialized.");
 
     // Dynamically allocate a list to store shell variables
-    shellVarList = (KeyValList*) malloc(sizeof(KeyValList));
+    shellVarList = (KeyValList*) calloc(1, sizeof(KeyValList));
     assert(shellVarList != NULL);
     shellVarList -> currIndex = 0;
     shellVarList -> length = INIT_MAX_LEN;
-    shellVarList -> shellVariables = (KeyValObject**) malloc(shellVarList -> length * sizeof(KeyValObject));
+    shellVarList -> shellVariables = (KeyValObject**) calloc(shellVarList -> length, sizeof(KeyValObject));
     assert(shellVarList -> shellVariables != NULL);
-
-    for (i = 0; i < shellVarList -> length; i++) {
-        shellVarList -> shellVariables[i] = NULL;
-    }
 }
 
 
