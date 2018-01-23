@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include "shell.h"
 #include "shellvars.h"
 #include "shellstring.h"
@@ -207,6 +208,7 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  */
 void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2) {
     int pid, returnStatus;
+    int fileDescriptor = 0;
     int fd[2];
 
     assert(cmd1 != NULL);
@@ -216,81 +218,90 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
     if (strcmp(cmd1, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
         setShellVariableFromArgs(cmd1, args1, arglen1);
-    } else if (pipeop == NULL) {
+    } else if (pipeop == NULL || strcmp(">", pipeop) == 0 || strcmp(">>", pipeop) == 0) {
         // Substitute any shell variables...
         bool substitutionPassed = substituteShellVariables(args1, arglen1);
 
         // Execute if all shell variables were valid
         if (substitutionPassed == true) {
-            // Fork the current process
-            pid = fork();
-            assert(pid != -1);
-
-            if (pid == 0) {
-                returnStatus = execvp(cmd1, *args1);
-                exit(returnStatus);
-            } else {
-                waitpid(pid, &returnStatus, 0);
-                assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
-
-                if (returnStatus == 65280 && cmd1 != NULL) {
-                    printf("Unrecognized command.\n");
+            if (pipeop != NULL) {
+                if (strcmp(">", pipeop) == 0) {
+                    // Open file, create if doesn't exist.
+                    fileDescriptor = open(cmd2, O_WRONLY|O_CREAT, 0666);
+                } else if (strcmp(">>", pipeop) == 0) {
+                    // Open file, create if doesn't exist.
+                    fileDescriptor = open(cmd2, O_WRONLY|O_CREAT|O_APPEND, 0666);
                 }
             }
+            if (fileDescriptor != -1) {
+                // Fork the current process
+                pid = fork();
+                assert(pid != -1);
+
+                if (pid == 0) {
+                    if (pipeop != NULL) {
+                        dup2(fileDescriptor, STDOUT_FILENO);
+                    }
+                    returnStatus = execvp(cmd1, *args1);
+                    exit(returnStatus);
+                } else {
+                    if (pipeop != NULL) {
+                        close(fileDescriptor);
+                    }
+                    waitpid(pid, &returnStatus, 0);
+                    assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
+
+                    if (returnStatus == 65280 && cmd1 != NULL) {
+                        printf("Unrecognized command.\n");
+                    }
+                }
+            } else {
+                printf("Could not redirect stdout to the file.\n");
+            }
         }
-    } else if (pipeop != NULL && *args2 != NULL && cmd2 != NULL) {
+    } else if (pipeop != NULL && strcmp("|", pipeop) == 0 && *args2 != NULL && cmd2 != NULL) {
         // Substitute shell variables
         bool substitutionPassedArgs1 = substituteShellVariables(args1, arglen1);
         bool substitutionPassedArgs2 = substituteShellVariables(args2, arglen2);
 
         if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
+            // Create pipe and fork
+            pipe(fd);
+            pid = fork();
+            assert(pid != -1);
 
-            if (strcmp(">", pipeop) == 0) {
-                printf("You want to overwrite file %s\n", cmd2);
-            } else if (strcmp(">>", pipeop) == 0) {
-                printf("You want to append to file %s\n", cmd2);
-            } else if (strcmp("|", pipeop) == 0) {
-                // With | we pipe stdout of first program to stdin of second program
-
-                // Create pipe and fork
-                pipe(fd);
+            if (pid == 0) {
+                // Fork again
                 pid = fork();
                 assert(pid != -1);
 
                 if (pid == 0) {
-                    // Fork again
-                    pid = fork();
-                    assert(pid != -1);
-
-                    if (pid == 0) {
-                        // This process is to write data, so close read part of pipe
-                        close(fd[READ]);
-                        // Close stdout, duplicate with write part of pipe
-                        dup2(fd[WRITE], STDOUT_FILENO);
-                        close(fd[WRITE]);
-                        // Execute the child program
-                        returnStatus = execvp(cmd1, *args1);
-                        exit(returnStatus);
-                    } else {
-                        // This process is to read data, so close write part of pipe
-                        close(fd[WRITE]);
-                        // Close stdin, duplicate with read part of pipe
-                        dup2(fd[READ], STDIN_FILENO);
-                        close(fd[READ]);
-                        // Execute the child program
-                        returnStatus = execvp(cmd2, *args2);
-                        exit(returnStatus);
-                    }
-
-                } else {
-                    // Close all of the pipe, we are going to wait for processes to finish
+                    // This process is to write data, so close read part of pipe
                     close(fd[READ]);
+                    // Close stdout, duplicate with write part of pipe
+                    dup2(fd[WRITE], STDOUT_FILENO);
                     close(fd[WRITE]);
-                    waitpid(pid, &returnStatus, 0);
+                    // Execute the child program
+                    returnStatus = execvp(cmd1, *args1);
+                    exit(returnStatus);
+                } else {
+                    // This process is to read data, so close write part of pipe
+                    close(fd[WRITE]);
+                    // Close stdin, duplicate with read part of pipe
+                    dup2(fd[READ], STDIN_FILENO);
+                    close(fd[READ]);
+                    // Execute the child program
+                    returnStatus = execvp(cmd2, *args2);
+                    exit(returnStatus);
+                }
+            } else {
+                // Close all of the pipe, we are going to wait for processes to finish
+                close(fd[READ]);
+                close(fd[WRITE]);
+                waitpid(pid, &returnStatus, 0);
 
-                    if (returnStatus == 65280 && cmd1 != NULL) {
-                        printf("Unrecognized command.\n");
-                    }
+                if (returnStatus == 65280 && cmd1 != NULL) {
+                    printf("Unrecognized command.\n");
                 }
             }
         }
