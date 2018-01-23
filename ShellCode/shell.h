@@ -21,9 +21,9 @@ typedef enum __PIPE_OP { nopipe, fileoverwrite, fileappend, fullpipe } pipeopera
 
 void freeArray(void **ary, int len);
 void loadShellVariablesFromFile();
-void setShellVariableFromArgs(char *cmd, char ***args, int arglen);
+void setShellVariableFromArgs(char ***args, int arglen);
 void getCommandWithArgs(char *input, char *del,
     char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, pipeoperation *pipeop);
-void executeUserCommand(char *cmd1, char ***args1, int arglen1, pipeoperation pipeop, char *cmd2, char ***args2, int arglen2);
+void executeUserCommand(char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, pipeoperation *pipeop);
 
 #endif

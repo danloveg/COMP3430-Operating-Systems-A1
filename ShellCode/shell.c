@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
             getCommandWithArgs(userInput, DELIMITER, &command1, &args1, &argCount1, &command2, &args2, &argCount2, &pipeOperator);
 
             // Execute the command
-            executeUserCommand(command1, &args1, argCount1, pipeOperator, command2, &args2, argCount2);
+            executeUserCommand(&command1, &args1, &argCount1, &command2, &args2, &argCount2, &pipeOperator);
 
             // Clean up for next iteration
             freeArray((void**) args1, argCount1);
@@ -201,37 +201,34 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  * @param char *cmd2: If piped, the string containing the user's second command
  * @param char ***arg2: If piped, the second set of arguments
  * @param int arglen2: If piped, the length of args2
- *
- * Example cmd and args for execvp (because it can be tricky)
- *     cmd: "/bin/ls"
- *     args: {"/bin/ls", "-l", "-a", 0}
  */
-void executeUserCommand(char *cmd1, char ***args1, int arglen1, pipeoperation pipeop, char *cmd2, char ***args2, int arglen2) {
+void executeUserCommand(char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2,
+    pipeoperation *pipeop) {
+
     int returnStatus = 0;
 
-    assert(cmd1 != NULL);
-    assert(args1 != NULL);
-    assert(*args1 != NULL);
+    assert(cmd1 != NULL && *cmd1 != NULL);
+    assert(args1 != NULL && *args1 != NULL);
 
-    if (strcmp(cmd1, SET_COMMAND) == 0) {
+    if (strcmp(*cmd1, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
-        setShellVariableFromArgs(cmd1, args1, arglen1);
+        setShellVariableFromArgs(args1, *arglen1);
     } else {
-        bool substitutionPassedArgs1 = substituteShellVariables(args1, arglen1);
-        bool substitutionPassedArgs2 = substituteShellVariables(args2, arglen2);
+        bool substitutionPassedArgs1 = substituteShellVariables(args1, *arglen1);
+        bool substitutionPassedArgs2 = substituteShellVariables(args2, *arglen2);
 
         if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
             // Shell variables were substituted, now execute the command(s)
-            if (pipeop == nopipe) {
-                returnStatus = executeSingleCommand(cmd1, args1);
+            if (*pipeop == nopipe) {
+                returnStatus = executeSingleCommand(*cmd1, args1);
             } else if (cmd2 == NULL || args2 == NULL || *args2 == NULL) {
                 printf("Cannot pipe into nothing.\n");
-            } else if (pipeop == fileoverwrite) {
-                returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
-            } else if (pipeop == fileappend) {
-                returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
-            } else if (pipeop == fullpipe) {
-                returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
+            } else if (*pipeop == fileoverwrite) {
+                returnStatus = executePipeToFile(*cmd1, args1, *cmd2, OVERWRITE);
+            } else if (*pipeop == fileappend) {
+                returnStatus = executePipeToFile(*cmd1, args1, *cmd2, APPEND);
+            } else if (*pipeop == fullpipe) {
+                returnStatus = executePipeToProgram(*cmd1, args1, *cmd2, args2);
             } 
 
             // Check return status
@@ -279,12 +276,10 @@ void freeArray(void **ary, int len) {
 /**
  * Set a new shell variable from the user's command and args.
  *
- * @param char *cmd: The user's command
  * @param char ***args: The user's arguments in execv format
  * @param int arglen: The length of the args array
  */
-void setShellVariableFromArgs(char *cmd, char ***args, int arglen) {
-    assert(cmd != NULL);
+void setShellVariableFromArgs(char ***args, int arglen) {
     assert(args != NULL);
     assert(*args != NULL);
 
