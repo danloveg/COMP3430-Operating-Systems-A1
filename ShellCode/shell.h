@@ -24,5 +24,6 @@ void getCommandWithArgs(char *input, char *del,
 void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2);
 
 typedef enum __BOOL { false, true } bool;
+typedef enum __PIPE_OP { fileoverwrite, fileappend, fullpipe } pipeoperation;
 
 #endif
