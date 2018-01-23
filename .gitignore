@@ -1,6 +1,9 @@
-# Ignored objects folder
+# Ignored objects folders
 object/
 
 # Ignore shell executable
 ShellCode/shell
+
+# Ignore minelement executable
+Question7Code/minelement
 
