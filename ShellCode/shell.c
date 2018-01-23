@@ -75,24 +75,9 @@ int main(int argc, char *argv[]) {
 }
 
 
-/**
- * Loads the shell variables from the file .shell_init at the user's home
- * directory.
- */
-void loadShellVariablesFromFile() {
-    if (openShellInitFile() == 0) {
-        char *line = NULL;
-
-        do {
-            line = readFileString();
-            tryAddVariable(line, SUPPRESS_OUTPUT);
-            free(line);
-        } while (line != NULL);
-
-        closeShellInitFile();
-    }
-}
-
+//------------------------------------------------------------------------------
+// GENERAL FUNCTIONS
+//------------------------------------------------------------------------------
 
 /**
  * Extract the user's command and arguments from the input string, as well as
@@ -253,6 +238,33 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
 
 
 /**
+ * Free a dynamically created array
+ *
+ * @param void *ary: The array to free
+ * @param int len: The length of the array
+ */
+void freeArray(void **ary, int len) {
+    int i;
+
+    if (ary != NULL) {
+        for (i = 0; i < len; i++) {
+            if (ary[i] != NULL) {
+                free(ary[i]);
+                ary[i] = NULL;
+            }
+        }
+
+        free(ary);
+        ary = NULL;
+    }
+}
+
+
+//------------------------------------------------------------------------------
+// SHELL VARIABLE SPECIFIC FUNCTIONS
+//------------------------------------------------------------------------------
+
+/**
  * Set a new shell variable from the user's command and args.
  *
  * @param char *cmd: The user's command
@@ -271,6 +283,29 @@ void setShellVariableFromArgs(char *cmd, char ***args, int arglen) {
     }
 }
 
+
+/**
+ * Loads the shell variables from the file .shell_init at the user's home
+ * directory.
+ */
+void loadShellVariablesFromFile() {
+    if (openShellInitFile() == 0) {
+        char *line = NULL;
+
+        do {
+            line = readFileString();
+            tryAddVariable(line, SUPPRESS_OUTPUT);
+            free(line);
+        } while (line != NULL);
+
+        closeShellInitFile();
+    }
+}
+
+
+//------------------------------------------------------------------------------
+// PIPE SPECIFIC FUNCTIONS
+//------------------------------------------------------------------------------
 
 /**
  * Get a pipe operation from a string array and the index of it in the array.
@@ -326,28 +361,5 @@ void splitArgsByPipe(char ***args1, int *arglen1, char **cmd2, char ***args2, in
     for (j = pipeIndex + 1, i = 0; j < *arglen1; j++, i++) {
         (*args2)[i] = (*args1)[j];
         (*args1)[j] = NULL;
-    }
-}
-
-
-/**
- * Free a dynamically created array
- *
- * @param void *ary: The array to free
- * @param int len: The length of the array
- */
-void freeArray(void **ary, int len) {
-    int i;
-
-    if (ary != NULL) {
-        for (i = 0; i < len; i++) {
-            if (ary[i] != NULL) {
-                free(ary[i]);
-                ary[i] = NULL;
-            }
-        }
-
-        free(ary);
-        ary = NULL;
     }
 }
