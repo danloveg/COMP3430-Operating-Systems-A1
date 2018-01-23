@@ -7,7 +7,7 @@
  *
  * Purpose: Provide the functionality of a mini shell. Takes input until the
  * user enters CTRL-D at the prompt. Allows the use of shell variables, as well
- * as two command pipes and stdout redirection.
+ * as two command pipes and stdout redirection via > or >>.
  */
 
 
@@ -22,8 +22,10 @@
 #include "shellstring.h"
 #include "shellfileio.h"
 
-
+// Internal prototypes
 void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind);
+void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int *arglen);
+void splitArgsByPipe(char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, int pipeIndex);
 
 
 int main(int argc, char *argv[]) {
@@ -53,7 +55,7 @@ int main(int argc, char *argv[]) {
 
         if (userInput[0] != '\0') {
             // Get command, arguments, and arguments length
-            getCommandWithArgs(userInput, DELIMITER, &command1, &args1, &argCount1, &pipeOperator, &command2, &args2, &argCount2);
+            getCommandWithArgs(userInput, DELIMITER, &command1, &args1, &argCount1, &command2, &args2, &argCount2, &pipeOperator);
 
             // Execute the command
             executeUserCommand(command1, &args1, argCount1, pipeOperator, command2, &args2, argCount2);
@@ -108,17 +110,15 @@ void loadShellVariablesFromFile() {
  * @param char ***args1: A pointer to an array of strings that gets assigned to
  *      a dynamically allocated string array containing the command line args
  * @param int *arglen1: The length of args1
- * @param char **pipeop: If piped, the operator used. |, >, or >>
  * @param char **cmd2: If piped, a pointer to the second command string
- * @param char ***args2: If piped, a pointer to an array of the second arg list
+ * @param char ***args2: If piped, a pointer to a dynamic array of the second
+ *     arg list
  * @param int *arglen2: If piped, the length of args2
+ * @param char **pipeop: If piped, the operator used. |, >, or >>
  */
 void getCommandWithArgs(char *input, char *delim,
-    char **cmd1, char ***args1, int *arglen1, char **pipeop, char **cmd2, char ***args2, int *arglen2) {
+    char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, char **pipeop) {
 
-    char tokBuf[MAX_INPUT_LEN] = "";
-    char *token = &tokBuf[0];
-    int i, j;
     int pipeIndex = -1;
 
     // Set second set of arguments to NULL
@@ -129,58 +129,74 @@ void getCommandWithArgs(char *input, char *delim,
     assert(input != NULL && "input string cannot be NULL");
     assert(delim != NULL && "delimiter cannot be NULL");
 
+    // Get a complete list of the first command and all arguments
+    createArgsFromInput(input, delim, cmd1, args1, arglen1);
+
+    // Get a pipe operator (if there is one)
+    getPipeop(args1, *arglen1, pipeop, &pipeIndex);
+
+    // Split the args into two arrays if there's a valid pipe
+    if (*pipeop != NULL && (*args1)[pipeIndex + 1] != NULL) {
+        splitArgsByPipe(args1, arglen1, cmd2, args2, arglen2, pipeIndex);
+    }
+}
+
+
+/**
+ * Create a string command and string array for all arguments. The input string
+ * is tokenized: the first token is put in cmd, AND the first element of args.
+ * The rest of the tokens are placed in the args array in order, as well as a
+ * NULL byte as the last item of args.
+ *
+ * Note: args is assigned a dynamically created array, so it must be freed.
+ *
+ * Example:
+ * If
+ *      input: "ls -l | wc -l", delim: " "
+ * Then
+ *      *cmd = "ls", **args = {"ls", "-l", "|", "wc", "-l", 0}, *arglen = 6
+ *
+ * @param char *input: The user's input as a string
+ * @param char *delim: The delimiter between commands and args
+ * @param char **cmd: Pointer to the command string
+ * @param char ***args: Pointer to array of strings, gets assigned dynamic array
+ * @param int *arglen: Gets assigned the length of the args array
+ */
+void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int *arglen) {
+    char tokBuf[MAX_INPUT_LEN] = "";
+    char *token = &tokBuf[0];
+    int i;
+
     if (input != NULL && delim != NULL) {
         // We need to add one for the null item at the end of the array
-        *arglen1 = countTokens(input, delim) + 1;
-        assert(*arglen1 > 0);
-        *args1 = malloc(*arglen1 * sizeof(char *));
-        assert(*args1 != NULL);
+        *arglen = countTokens(input, delim) + 1;
+        assert(*arglen > 0);
+        *args = malloc(*arglen * sizeof(char *));
+        assert(*args != NULL);
 
         // Fill dynamic array, with a zero as the last item
-        for (i = 0; i < *arglen1; i++) {
+        for (i = 0; i < *arglen; i++) {
 
             // Get token
             if (i == 0) {
                 token = strtok(input, delim);
                 assert(token != NULL);
-                strcpy(*cmd1, token);
-                assert(*cmd1 != NULL);
-            } else if (i < *arglen1 - 1) {
+                strcpy(*cmd, token);
+                assert(*cmd != NULL);
+            } else if (i < *arglen - 1) {
                 token = strtok(NULL, delim);
                 assert(token != NULL);
             }
 
             // Put token (or zero) into array
-            if (i < *arglen1 - 1) {
-                (*args1)[i] = malloc(strlen(token) + 1);
-                assert((*args1)[i] != NULL);
-                strcpy((*args1)[i], token);
+            if (i < *arglen - 1) {
+                (*args)[i] = strdup(token);
+                assert((*args)[i] != NULL);
             } else {
-                (*args1)[i] = malloc(sizeof(char));
-                assert((*args1)[i] != NULL);
-                (*args1)[i] = (char) 0;
+                (*args)[i] = malloc(sizeof(char));
+                assert((*args)[i] != NULL);
+                (*args)[i] = '\0';
             }
-        }
-    }
-
-    getPipeop(args1, *arglen1, pipeop, &pipeIndex);
-
-    // If we have a pipe, we need to do some pointer re-pointing
-    if (*pipeop != NULL && (*args1)[pipeIndex + 1] != NULL) {
-        *arglen2 = *arglen1 - pipeIndex - 1;
-        assert(*arglen2 > -1);
-
-        // We don't want the operator as a part of the list
-        free((*args1)[pipeIndex]);
-        (*args1)[pipeIndex] = NULL;
-        *args2 = malloc(*arglen2 * sizeof(char*));
-        assert(*args2 != NULL);
-        strcpy(*cmd2, (*args1)[pipeIndex + 1]);
-
-        // Redirect pointers
-        for (j = pipeIndex + 1, i = 0; j < *arglen1; j++, i++) {
-            (*args2)[i] = (*args1)[j];
-            (*args1)[j] = NULL;
         }
     }
 }
@@ -271,6 +287,46 @@ void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind) {
     if ((*pipeind = getStringIndex(args, arglen, ">")) != -1) *pipeop = ">";
     else if((*pipeind = getStringIndex(args, arglen, ">>")) != -1) *pipeop = ">>";
     else if((*pipeind = getStringIndex(args, arglen, "|")) != -1) *pipeop = "|";
+}
+
+
+/**
+ * Split the argument list into two lists, one of args before the pipe, one of
+ * the arguments after the pipe. It splits the arguments at the index of
+ * pipeIndex.
+ *
+ * Example:
+ * If
+ *      **args1 = {"ls", "|", "wc", 0}
+ * Then
+ *      **args1 = {"ls", 0, 0, 0}, *cmd2 = "ls", **args2 = {"wc", "-l", 0}, *arglen2 = 3
+ *
+ * @param char ***args1: The entire argument list
+ * @param int *arglen1: The length of args1
+ * @param char **cmd2: Gets assigned to pointer to second command
+ * @param char ***args2: Gets assigned dynamic array of second argument list
+ * @param int *arglen2: Gets assigned length of args2
+ * @param int pipeIndex: The index of args1 where the pipe is
+ */
+void splitArgsByPipe(char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, int pipeIndex) {
+    int i, j;
+
+    *arglen2 = *arglen1 - pipeIndex - 1;
+    assert(*arglen2 > -1);
+
+    // We don't want the operator as a part of the arg list. So, get rid of it
+    free((*args1)[pipeIndex]);
+    (*args1)[pipeIndex] = NULL;
+
+    *args2 = malloc(*arglen2 * sizeof(char*));
+    assert(*args2 != NULL);
+    strcpy(*cmd2, (*args1)[pipeIndex + 1]);
+
+    // Redirect pointers
+    for (j = pipeIndex + 1, i = 0; j < *arglen1; j++, i++) {
+        (*args2)[i] = (*args1)[j];
+        (*args1)[j] = NULL;
+    }
 }
 
 
