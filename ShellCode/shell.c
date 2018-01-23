@@ -208,7 +208,7 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
 void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2) {
-    int returnStatus;
+    int returnStatus = 0;
 
     assert(cmd1 != NULL);
     assert(args1 != NULL);
@@ -217,56 +217,40 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
     if (strcmp(cmd1, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
         setShellVariableFromArgs(cmd1, args1, arglen1);
-    } else if (pipeop == NULL) {
-        // Substitute any shell variables...
-        bool substitutionPassed = substituteShellVariables(args1, arglen1);
-
-        if (substitutionPassed == true) {
-            returnStatus = executeSingleCommand(cmd1, args1);
-        }
-
-        assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
-
-        if (returnStatus == 65280 && cmd1 != NULL) {
-            printf("Unrecognized command.\n");
-        }
-
-    } else if (pipeop != NULL && (strcmp(">", pipeop) == 0 || strcmp(">>", pipeop) == 0)) {
-        // Substitute any shell variables...
-        bool substitutionPassed = substituteShellVariables(args1, arglen1);
-
-        // Execute if all shell variables were valid
-        if (substitutionPassed == true) {
-            if (strcmp(">", pipeop) == 0) {
-                returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
-            } else if (strcmp(">>", pipeop) == 0) {
-                returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
-            }
- 
-            assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
-
-            if (returnStatus == 65280 && cmd1 != NULL) {
-                printf("Unrecognized command.\n");
-            }
-        }
-    } else if (pipeop != NULL && strcmp("|", pipeop) == 0 && *args2 != NULL && cmd2 != NULL) {
-        // Substitute shell variables
+    } else {
         bool substitutionPassedArgs1 = substituteShellVariables(args1, arglen1);
         bool substitutionPassedArgs2 = substituteShellVariables(args2, arglen2);
 
-        // Then pipe program one's output to program 2's input
         if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
-            returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
-        }
+            // Shell variables were substituted, now execute the command(s)
+            if (pipeop == NULL) {
+                // If no pipe, execute normally
+                returnStatus = executeSingleCommand(cmd1, args1);
+            } else if ((strcmp(pipeop, ">") == 0 || strcmp(pipeop, ">>") == 0) && (args2 != NULL && cmd2 != NULL)) {
+                // If file redirect pipe, open the file for overwrite or append
+                if (strcmp(">", pipeop) == 0) {
+                    returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
+                } else if (strcmp(">>", pipeop) == 0) {
+                    returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
+                }
+            } else if (strcmp(pipeop, "|") == 0 && (args2 != NULL && cmd2 != NULL)) {
+                // If full pipe, pipe stdout of program 1 to stdin of program 2
+                returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
+            } else if (args2 == NULL || cmd2 == NULL) {
+                printf("Cannot pipe into nothing.\n");
+            }
 
-        assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
+            // Check return status
+            assert(returnStatus != -11 && "execvp received NULL for one or more arguments");
 
-        // Check return code
-        if (returnStatus == 65280 && cmd1 != NULL) {
-            printf("Unrecognized command.\n");
+            if (returnStatus == 65280) {
+                printf("Unrecognized command.\n");
+            } else if (returnStatus == -1) {
+                printf("Could not open file\n");
+            }
+        } else {
+            printf("Could not find shell variable.\n");
         }
-    } else if (pipeop == NULL || *args2 == NULL || cmd2 == NULL) {
-        printf("Cannot pipe into nothing.\n");
     }
 }
 
