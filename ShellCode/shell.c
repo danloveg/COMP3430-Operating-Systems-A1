@@ -26,7 +26,7 @@
 #include "shellexecute.h"
 
 // Internal prototypes
-void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind);
+void getPipeop(char ***args, int arglen, pipeoperation *pipeop, int *pipeind);
 void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int *arglen);
 void splitArgsByPipe(char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, int pipeIndex);
 
@@ -35,11 +35,10 @@ int main(int argc, char *argv[]) {
     char inBuf[MAX_INPUT_LEN] = "";
     char commandBuf1[MAX_INPUT_LEN] = "";
     char commandBuf2[MAX_INPUT_LEN] = "";
-    char pipeopBuf[3] = "";
     char *userInput = &inBuf[0];
     char *command1 = &commandBuf1[0];
     char *command2 = &commandBuf2[0];
-    char *pipeOperator = &pipeopBuf[0];
+    pipeoperation pipeOperator = nopipe;
     char **args1 = NULL;
     char **args2 = NULL;
     int argCount1;
@@ -105,12 +104,12 @@ int main(int argc, char *argv[]) {
  * @param char **pipeop: If piped, the operator used. |, >, or >>
  */
 void getCommandWithArgs(char *input, char *delim,
-    char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, char **pipeop) {
+    char **cmd1, char ***args1, int *arglen1, char **cmd2, char ***args2, int *arglen2, pipeoperation *pipeop) {
 
     int pipeIndex = -1;
 
     // Set second set of arguments to NULL
-    *pipeop = NULL;
+    *pipeop = nopipe;
     *args2 = NULL;
     *arglen2 = -1;
 
@@ -124,7 +123,7 @@ void getCommandWithArgs(char *input, char *delim,
     getPipeop(args1, *arglen1, pipeop, &pipeIndex);
 
     // Split the args into two arrays if there's a valid pipe
-    if (*pipeop != NULL && (*args1)[pipeIndex + 1] != NULL) {
+    if (*pipeop != nopipe && (*args1)[pipeIndex + 1] != NULL) {
         splitArgsByPipe(args1, arglen1, cmd2, args2, arglen2, pipeIndex);
     }
 }
@@ -207,7 +206,7 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  *     cmd: "/bin/ls"
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
-void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2) {
+void executeUserCommand(char *cmd1, char ***args1, int arglen1, pipeoperation pipeop, char *cmd2, char ***args2, int arglen2) {
     int returnStatus = 0;
 
     assert(cmd1 != NULL);
@@ -223,18 +222,13 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
 
         if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
             // Shell variables were substituted, now execute the command(s)
-            if (pipeop == NULL) {
-                // If no pipe, execute normally
+            if (pipeop == nopipe) {
                 returnStatus = executeSingleCommand(cmd1, args1);
-            } else if ((strcmp(pipeop, ">") == 0 || strcmp(pipeop, ">>") == 0) && (args2 != NULL && cmd2 != NULL)) {
-                // If file redirect pipe, open the file for overwrite or append
-                if (strcmp(">", pipeop) == 0) {
-                    returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
-                } else if (strcmp(">>", pipeop) == 0) {
-                    returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
-                }
-            } else if (strcmp(pipeop, "|") == 0 && (args2 != NULL && cmd2 != NULL)) {
-                // If full pipe, pipe stdout of program 1 to stdin of program 2
+            } else if (pipeop == fileoverwrite && cmd2 != NULL && args2 != NULL) {
+                returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
+            } else if (pipeop == fileappend && cmd2 != NULL && args2 != NULL) {
+                returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
+            } else if (pipeop == fullpipe && cmd2 != NULL && args2 != NULL) {
                 returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
             } else if (args2 == NULL || cmd2 == NULL) {
                 printf("Cannot pipe into nothing.\n");
@@ -333,13 +327,13 @@ void loadShellVariablesFromFile() {
  * @param char **pipeop: Pointer to pipe operation. Given NULL if no pipe
  * @param int *pipeind: Pointer to pipe index. Given -1 if no pipe
  */
-void getPipeop(char ***args, int arglen, char **pipeop, int *pipeind) {
+void getPipeop(char ***args, int arglen, pipeoperation *pipeop, int *pipeind) {
     *pipeind = -1;
-    *pipeop = NULL;
+    *pipeop = nopipe;
 
-    if ((*pipeind = getStringIndex(args, arglen, ">")) != -1) *pipeop = ">";
-    else if((*pipeind = getStringIndex(args, arglen, ">>")) != -1) *pipeop = ">>";
-    else if((*pipeind = getStringIndex(args, arglen, "|")) != -1) *pipeop = "|";
+    if ((*pipeind = getStringIndex(args, arglen, ">")) != -1) *pipeop = fileoverwrite;
+    else if((*pipeind = getStringIndex(args, arglen, ">>")) != -1) *pipeop = fileappend;
+    else if((*pipeind = getStringIndex(args, arglen, "|")) != -1) *pipeop = fullpipe;
 }
 
 
