@@ -204,7 +204,7 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  *     cmd: "/bin/ls"
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
-void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***arg2, int arglen2) {
+void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2) {
     int pid, returnStatus;
 
     assert(cmd1 != NULL);
@@ -214,7 +214,7 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
     if (strcmp(cmd1, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
         setShellVariableFromArgs(cmd1, args1, arglen1);
-    } else {
+    } else if (pipeop == NULL) {
         // Substitute any shell variables...
         bool substitutionPassed = substituteShellVariables(args1, arglen1);
 
@@ -233,6 +233,16 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
                 }
             }
         }
+    } else if (pipeop != NULL && *args2 != NULL && cmd2 != NULL) {
+        // Substitute shell variables
+        bool substitutionPassedArgs1 = substituteShellVariables(args1, arglen1);
+        bool substitutionPassedArgs2 = substituteShellVariables(args2, arglen2);
+
+        if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
+            printf("Piped with %s!\n", pipeop);
+        }
+    } else if (pipeop == NULL || *args2 == NULL || cmd2 == NULL) {
+        printf("Cannot pipe into nothing.\n");
     }
 }
 
