@@ -15,8 +15,6 @@
 #define MAX_INPUT_LEN 80
 #define DELIMITER " "
 #define SET_COMMAND "set"
-#define READ 0
-#define WRITE 1
 
 void freeArray(void **ary, int len);
 void loadShellVariablesFromFile();
