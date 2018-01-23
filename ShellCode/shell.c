@@ -208,8 +208,7 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  *     args: {"/bin/ls", "-l", "-a", 0}
  */
 void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2) {
-    int pid, returnStatus;
-    int fileDescriptor = 0;
+    int returnStatus;
 
     assert(cmd1 != NULL);
     assert(args1 != NULL);
@@ -218,45 +217,36 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
     if (strcmp(cmd1, SET_COMMAND) == 0) {
         // User used set command, try to set shell variable:
         setShellVariableFromArgs(cmd1, args1, arglen1);
-    } else if (pipeop == NULL || strcmp(">", pipeop) == 0 || strcmp(">>", pipeop) == 0) {
+    } else if (pipeop == NULL) {
+        // Substitute any shell variables...
+        bool substitutionPassed = substituteShellVariables(args1, arglen1);
+
+        if (substitutionPassed == true) {
+            returnStatus = executeSingleCommand(cmd1, args1);
+        }
+
+        assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
+
+        if (returnStatus == 65280 && cmd1 != NULL) {
+            printf("Unrecognized command.\n");
+        }
+
+    } else if (pipeop != NULL && (strcmp(">", pipeop) == 0 || strcmp(">>", pipeop) == 0)) {
         // Substitute any shell variables...
         bool substitutionPassed = substituteShellVariables(args1, arglen1);
 
         // Execute if all shell variables were valid
         if (substitutionPassed == true) {
-            if (pipeop != NULL) {
-                if (strcmp(">", pipeop) == 0) {
-                    // Open file, create if doesn't exist.
-                    fileDescriptor = open(cmd2, O_WRONLY|O_CREAT, 0666);
-                } else if (strcmp(">>", pipeop) == 0) {
-                    // Open file, create if doesn't exist.
-                    fileDescriptor = open(cmd2, O_WRONLY|O_CREAT|O_APPEND, 0666);
-                }
+            if (strcmp(">", pipeop) == 0) {
+                returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
+            } else if (strcmp(">>", pipeop) == 0) {
+                returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
             }
-            if (fileDescriptor != -1) {
-                // Fork the current process
-                pid = fork();
-                assert(pid != -1);
+ 
+            assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
 
-                if (pid == 0) {
-                    if (pipeop != NULL) {
-                        dup2(fileDescriptor, STDOUT_FILENO);
-                    }
-                    returnStatus = execvp(cmd1, *args1);
-                    exit(returnStatus);
-                } else {
-                    if (pipeop != NULL) {
-                        close(fileDescriptor);
-                    }
-                    waitpid(pid, &returnStatus, 0);
-                    assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
-
-                    if (returnStatus == 65280 && cmd1 != NULL) {
-                        printf("Unrecognized command.\n");
-                    }
-                }
-            } else {
-                printf("Could not redirect stdout to the file.\n");
+            if (returnStatus == 65280 && cmd1 != NULL) {
+                printf("Unrecognized command.\n");
             }
         }
     } else if (pipeop != NULL && strcmp("|", pipeop) == 0 && *args2 != NULL && cmd2 != NULL) {
@@ -268,6 +258,8 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
         if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
             returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
         }
+
+        assert(returnStatus != 11 && "execvp received NULL for one or more arguments");
 
         // Check return code
         if (returnStatus == 65280 && cmd1 != NULL) {
