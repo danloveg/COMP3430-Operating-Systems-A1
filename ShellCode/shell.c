@@ -224,15 +224,15 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, pipeoperation pi
             // Shell variables were substituted, now execute the command(s)
             if (pipeop == nopipe) {
                 returnStatus = executeSingleCommand(cmd1, args1);
-            } else if (pipeop == fileoverwrite && cmd2 != NULL && args2 != NULL) {
-                returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
-            } else if (pipeop == fileappend && cmd2 != NULL && args2 != NULL) {
-                returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
-            } else if (pipeop == fullpipe && cmd2 != NULL && args2 != NULL) {
-                returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
-            } else if (args2 == NULL || cmd2 == NULL) {
+            } else if (cmd2 == NULL || args2 == NULL || *args2 == NULL) {
                 printf("Cannot pipe into nothing.\n");
-            }
+            } else if (pipeop == fileoverwrite) {
+                returnStatus = executePipeToFile(cmd1, args1, cmd2, OVERWRITE);
+            } else if (pipeop == fileappend) {
+                returnStatus = executePipeToFile(cmd1, args1, cmd2, APPEND);
+            } else if (pipeop == fullpipe) {
+                returnStatus = executePipeToProgram(cmd1, args1, cmd2, args2);
+            } 
 
             // Check return status
             assert(returnStatus != -11 && "execvp received NULL for one or more arguments");
