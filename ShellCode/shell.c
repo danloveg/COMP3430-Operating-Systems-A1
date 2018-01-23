@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
 #include "shell.h"
 #include "shellvars.h"
 #include "shellstring.h"
@@ -206,6 +207,7 @@ void createArgsFromInput(char *input, char *delim, char **cmd, char ***args, int
  */
 void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, char *cmd2, char ***args2, int arglen2) {
     int pid, returnStatus;
+    int fd[2];
 
     assert(cmd1 != NULL);
     assert(args1 != NULL);
@@ -221,7 +223,10 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
         // Execute if all shell variables were valid
         if (substitutionPassed == true) {
             // Fork the current process
-            if ((pid = fork()) == 0) {
+            pid = fork();
+            assert(pid != -1);
+
+            if (pid == 0) {
                 returnStatus = execvp(cmd1, *args1);
                 exit(returnStatus);
             } else {
@@ -239,7 +244,55 @@ void executeUserCommand(char *cmd1, char ***args1, int arglen1, char *pipeop, ch
         bool substitutionPassedArgs2 = substituteShellVariables(args2, arglen2);
 
         if (substitutionPassedArgs1 == true && substitutionPassedArgs2 == true) {
-            printf("Piped with %s!\n", pipeop);
+
+            if (strcmp(">", pipeop) == 0) {
+                printf("You want to overwrite file %s\n", cmd2);
+            } else if (strcmp(">>", pipeop) == 0) {
+                printf("You want to append to file %s\n", cmd2);
+            } else if (strcmp("|", pipeop) == 0) {
+                // With | we pipe stdout of first program to stdin of second program
+
+                // Create pipe and fork
+                pipe(fd);
+                pid = fork();
+                assert(pid != -1);
+
+                if (pid == 0) {
+                    // Fork again
+                    pid = fork();
+                    assert(pid != -1);
+
+                    if (pid == 0) {
+                        // This process is to write data, so close read part of pipe
+                        close(fd[READ]);
+                        // Close stdout, duplicate with write part of pipe
+                        dup2(fd[WRITE], STDOUT_FILENO);
+                        close(fd[WRITE]);
+                        // Execute the child program
+                        returnStatus = execvp(cmd1, *args1);
+                        exit(returnStatus);
+                    } else {
+                        // This process is to read data, so close write part of pipe
+                        close(fd[WRITE]);
+                        // Close stdin, duplicate with read part of pipe
+                        dup2(fd[READ], STDIN_FILENO);
+                        close(fd[READ]);
+                        // Execute the child program
+                        returnStatus = execvp(cmd2, *args2);
+                        exit(returnStatus);
+                    }
+
+                } else {
+                    // Close all of the pipe, we are going to wait for processes to finish
+                    close(fd[READ]);
+                    close(fd[WRITE]);
+                    waitpid(pid, &returnStatus, 0);
+
+                    if (returnStatus == 65280 && cmd1 != NULL) {
+                        printf("Unrecognized command.\n");
+                    }
+                }
+            }
         }
     } else if (pipeop == NULL || *args2 == NULL || cmd2 == NULL) {
         printf("Cannot pipe into nothing.\n");
