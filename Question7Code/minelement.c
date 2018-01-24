@@ -28,12 +28,11 @@ int findMin(unsigned int threadNumElts, unsigned int start, const int *ar);
 void loadArrayFromFile(const char *filename, int *ar, int numElts);
 void *workerThread(void *arg);
 
-// Static int array
-int *ar;
 
 int main (int argc, char *argv[]) {
     int i, numThreads, numElts, eltsPerThread, minimum = 0;
     int *returnValue;
+    int *ar;
     StartEndArray threadArg;
 
     // Get arguments
