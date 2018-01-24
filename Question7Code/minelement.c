@@ -71,6 +71,7 @@ int main (int argc, char *argv[]) {
 
     // Clean up
     free(ar);
+    exit(0);
 }
 
 
@@ -87,7 +88,7 @@ void *workerThread(void *arg) {
 
 /**
  * Load the array with integers from the file.
- * 
+ *
  * @param const char *filename: The name of the file. Must be a relative or full
  *     path
  * @param int *ar: The array to file
@@ -105,7 +106,7 @@ void loadArrayFromFile(const char *filename, int *ar, int numElts) {
     if (access(filename, F_OK) != -1) {
 
         filePtr = fopen(filename, "r");
- 
+
         if (filePtr != NULL) {
             // File is opened. Start processing.
             for (arIndex = 0; arIndex < numElts; arIndex++) {
@@ -141,7 +142,7 @@ void loadArrayFromFile(const char *filename, int *ar, int numElts) {
 
 /**
  * Find the minimum number in an array of ints.
- * 
+ *
  * @param unsigned int threadNumElts: The number of elements to look through
  * @param unsigned int start: The starting index to look from
  * @param const int *ar: Int array
@@ -162,7 +163,7 @@ int findMin(unsigned int threadNumElts, unsigned int start, const int *ar) {
 
 /**
  * Get numThreads and numElts from command line args.
- * 
+ *
  * @param int argc: Length of argv
  * @param char *argv[]: Command line arguments
  * @param int *numThreads: Gets assigned the number of threads
