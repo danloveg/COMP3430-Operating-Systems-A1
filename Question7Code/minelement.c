@@ -28,35 +28,51 @@ int findMin(unsigned int threadNumElts, unsigned int start, const int *ar);
 void loadArrayFromFile(const char *filename, int *ar, int numElts);
 void *workerThread(void *arg);
 
-// Define static array
+// Static int array
 int *ar;
 
 int main (int argc, char *argv[]) {
-    pthread_t p;
+    int i, numThreads, numElts, eltsPerThread, minimum = 0;
+    int *returnValue;
+    StartEndArray threadArg;
 
     // Get arguments
-    int numThreads, numElts = 0;
     getArgs(argc, argv, &numThreads, &numElts);
+    if (numThreads == 1) {
+        printf("Using %d thread to find minimum of %d elements...\n", numThreads, numElts);
+    } else {
+        printf("Using %d threads to find minimum of %d elements...\n", numThreads, numElts);
+    }
 
-    printf("Num threads: %d, Num elements: %d\n", numThreads, numElts);
-
-    // Allocate array and fill it
+    // Allocate arrays
     ar = calloc(numElts, sizeof(int));
     loadArrayFromFile(FILENAME, ar, numElts);
 
-    // Create worker thread (test)
-    int *returnValue;
-    StartEndArray threadArg;
-    threadArg.start = 0;
-    threadArg.end = 5;
-    threadArg.ar = ar;
+    int reducedIntBuf[numThreads];
+    int *reducedArray = &reducedIntBuf[0];
+    pthread_t threads[numThreads];
+    eltsPerThread = numElts / numThreads;
 
-    pthread_create(&p, NULL, workerThread, &threadArg);
-    pthread_join(p, (void **) &returnValue);
+    // Create threads
+    for (i = 0; i < numThreads; i++) {
+        threadArg.ar = ar;
+        threadArg.start = i * eltsPerThread;
+        threadArg.end = (i * eltsPerThread) + eltsPerThread;
+        pthread_create(&threads[i], NULL, workerThread, &threadArg);
+    }
 
-    printf("%d returned from thread.\n", (int) *returnValue);
+    minimum = findMin(12, 12, ar);
 
-    free(returnValue);
+    // Join threads and add their min to a reduced array
+    for (i = 0; i < numThreads; i++) {
+        pthread_join(threads[i], (void **) &returnValue);
+        reducedArray[i] = *returnValue;
+        free(returnValue);
+    }
+
+    // Get the minimum from the reduced array
+    minimum = findMin(numThreads, 0, reducedArray);
+    printf("MINIMUM VALUE = %d\n", minimum);
 
     // Clean up
     free(ar);
@@ -140,7 +156,7 @@ int findMin(unsigned int threadNumElts, unsigned int start, const int *ar) {
     int i;
     int min = ar[start];
 
-    for (i = start + 1; i < threadNumElts; i++) {
+    for (i = start + 1; i < threadNumElts + start; i++) {
         if (ar[i] < min) {
             min = ar[i];
         }
