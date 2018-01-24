@@ -19,7 +19,7 @@
 
 typedef struct __START_END {
     int start;
-    int end;
+    int numElts;
     int *ar;
 } StartEndArray;
 
@@ -38,11 +38,7 @@ int main (int argc, char *argv[]) {
 
     // Get arguments
     getArgs(argc, argv, &numThreads, &numElts);
-    if (numThreads == 1) {
-        printf("Using %d thread to find minimum of %d elements...\n", numThreads, numElts);
-    } else {
-        printf("Using %d threads to find minimum of %d elements...\n", numThreads, numElts);
-    }
+    printf("Using %d thread(s) to find minimum of %d element(s)...\n", numThreads, numElts);
 
     // Allocate arrays
     ar = calloc(numElts, sizeof(int));
@@ -57,7 +53,7 @@ int main (int argc, char *argv[]) {
     for (i = 0; i < numThreads; i++) {
         threadArg.ar = ar;
         threadArg.start = i * eltsPerThread;
-        threadArg.end = (i * eltsPerThread) + eltsPerThread;
+        threadArg.numElts = eltsPerThread;
         pthread_create(&threads[i], NULL, workerThread, &threadArg);
     }
 
@@ -83,9 +79,8 @@ void *workerThread(void *arg) {
     StartEndArray *my_arg = (StartEndArray *) arg;
 
     // Find minimum value in array
-    int numElts = my_arg -> end - my_arg -> start;
     int *returnValue = malloc(sizeof(int));
-    *returnValue = findMin(numElts, my_arg -> start, my_arg -> ar);
+    *returnValue = findMin(my_arg -> numElts, my_arg -> start, my_arg -> ar);
 
     return (void *) returnValue;
 }
