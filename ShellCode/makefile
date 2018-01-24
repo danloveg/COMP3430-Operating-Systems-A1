@@ -6,7 +6,7 @@ HEADERS = shell.h shellvars.h shellstring.h shellfileio.h shellexecute.h
 SOURCES = shell.c shellvars.c shellstring.c shellfileio.c shellexecute.c
 
 OBJDIR = object
-OBJECTS = $(OBJDIR)/shell.o $(OBJDIR)/shellvars.o $(OBJDIR)/shellstring.o $(OBJDIR)/shellfileio.o $(OBJDIR)/shellpipe.o
+OBJECTS = $(OBJDIR)/shell.o $(OBJDIR)/shellvars.o $(OBJDIR)/shellstring.o $(OBJDIR)/shellfileio.o $(OBJDIR)/shellexecute.o
 
 $(PROG): $(OBJECTS) $(OBJDIR)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@
