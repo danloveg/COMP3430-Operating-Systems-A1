@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -lpthread -Wall
+CFLAGS = -g -pthread -Wall
 
 PROG = minelement
 SOURCES = minelement.c
