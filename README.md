@@ -26,3 +26,5 @@ This program uses a divide-and-conquer method to find the minimum element in an 
 1. From a terminal, change directory to Q5: `cd Question7Code`
 2. Build the executable: `make`
 3. Run the program, with two arguments, numThreads and numElts. numThreads is the number of threads to use, numElts is the number of integers to read from the file numbers.txt. numThreads must divide numElts. `./minelement  <numThreads> <numElts>`
+
+The python script `minimum.py` serves as a verifier that minelement is working correctly. Note though that it reads every number from the file numbers.txt whereas minelement does not necessarily.
