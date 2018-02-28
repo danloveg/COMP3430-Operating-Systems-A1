@@ -11,9 +11,9 @@ All of the code has only been tested on Linux (Scientific and Ubuntu) and cannot
 
 ### Questions 4 - 6
 
-Each of these questions builds on the last. Question 4 includes the ability to set shell variables, question 5 adds shell variable initialization from a file, and question 6 allows a single pipe via |, >, or >>.
+Each of these questions builds on the last. Question 4 includes the ability to set shell variables, question 5 adds shell variable initialization from a file, and question 6 allows a single pipe via |, >, or >>. The code in the directory shellCode contains the most recent additions.
 
-1. From a terminal, change directory to either Q4, Q5, or Q6: `cd Q5`
+1. From a terminal, change directory to ShellCode: `cd ShellCode`
 2. Build the executable: `make`
 3. Run the shell: `./shell`
 
